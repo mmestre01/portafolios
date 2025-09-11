@@ -1,0 +1,14 @@
+/* Reset básico y estilos globales */
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: #fff; /* Fondo blanco, cambia si quieres otro color */
+  box-sizing: border-box;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: inherit;
+}
