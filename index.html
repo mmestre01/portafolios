@@ -2,48 +2,369 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Portafolio de mmestre01</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mi Portafolio - Fullstack Developer</title>
   <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
     body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      color: #f5f5f5;
+      line-height: 1.6;
+      scroll-behavior: smooth;
+    }
+
+    header {
       text-align: center;
-      background: linear-gradient(135deg, #4facfe, #00f2fe);
-      color: #fff;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
+      padding: 80px 20px 60px;
     }
-    h1 {
+
+    header h1 {
       font-size: 3rem;
-      margin-bottom: 1rem;
+      margin-bottom: 10px;
+      animation: fadeSlideDown 1.2s ease forwards;
+      opacity: 0;
+      transform: translateY(-40px);
     }
-    p {
-      font-size: 1.2rem;
-      margin-bottom: 2rem;
+
+    header p {
+      font-size: 1.3rem;
+      color: #d3d3d3;
+      animation: fadeSlideUp 1.2s ease forwards;
+      opacity: 0;
+      transform: translateY(40px);
+      animation-delay: .3s;
     }
-    a {
-      background: #fff;
-      color: #0077cc;
-      padding: 12px 24px;
-      border-radius: 8px;
+
+    nav {
+      text-align: center;
+      margin: 30px 0;
+    }
+
+    nav a {
+      display: inline-block;
+      margin: 0 15px;
+      padding: 10px 20px;
+      border-radius: 30px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: #f5f5f5;
+      text-decoration: none;
+      transition: 0.3s;
+      backdrop-filter: blur(4px);
+    }
+
+    nav a:hover {
+      background: rgba(0,173,181,0.7);
+      transform: translateY(-3px);
+    }
+
+    section {
+      max-width: 1000px;
+      margin: auto;
+      padding: 60px 20px;
+      opacity: 0;
+      transform: translateY(40px);
+      filter: blur(8px);
+      transition: all 1s ease;
+    }
+
+    section.show {
+      opacity: 1;
+      transform: translateY(0);
+      filter: blur(0);
+    }
+
+    /* --- SOBRE MI --- */
+    .about {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start; /* Foto arriba, alineada con el título */
+      gap: 40px;
+    }
+
+    .about-text { flex: 1; }
+    .about-text h2 { margin-bottom: 15px; font-size: 2rem; }
+    .about-text p { margin-bottom: 15px; color: #ddd; }
+
+    .about img {
+      width: 220px;
+      height: 220px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 4px solid #00adb5;
+      box-shadow: 0px 10px 25px rgba(0,0,0,0.6);
+      transition: transform 0.3s ease;
+    }
+
+    .about img:hover { transform: scale(1.05); }
+
+    /* --- HABILIDADES --- */
+    .skills { text-align: center; }
+
+    .skills-grid {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 15px;
+      margin-top: 20px;
+    }
+
+    .skill {
+      background: rgba(255,255,255,0.1);
+      padding: 10px 20px;
+      border-radius: 20px;
+      font-size: 0.95rem;
+      transition: 0.3s;
+    }
+
+    .skill:hover {
+      background: #00adb5;
+      transform: scale(1.1);
+    }
+
+    /* --- EXPERIENCIA --- */
+    .experience { margin-top: 20px; }
+    .experience h3 { margin-bottom: 15px; }
+    .experience-item { margin-bottom: 25px; }
+    .experience-item strong { font-size: 1.1rem; }
+    .experience-item em { color: #bbb; font-size: 0.9rem; }
+    .experience-item ul {
+      margin-top: 8px;
+      margin-left: 20px;
+    }
+    .experience-item ul li {
+      margin-bottom: 6px;
+      list-style: disc;
+    }
+
+    /* --- PROYECTOS --- */
+    .projects {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 25px;
+      margin-top: 40px;
+    }
+
+    .card {
+      background: rgba(28,28,28,0.85);
+      border-radius: 20px;
+      padding: 25px;
+      text-align: center;
+      border: 1px solid rgba(255,255,255,0.05);
+      opacity: 0;
+      transform: translateY(60px) scale(0.95);
+      filter: blur(8px);
+      transition: all 1s ease;
+    }
+
+    .card.show {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      filter: blur(0);
+    }
+
+    .card:hover {
+      transform: translateY(-8px) scale(1.03);
+      box-shadow: 0px 10px 25px rgba(0,0,0,0.6);
+    }
+
+    .card h3 { margin-bottom: 10px; }
+    .card p { font-size: 0.95rem; color: #ccc; margin-bottom: 15px; }
+    .card a {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 8px 16px;
+      border-radius: 20px;
+      background: #00adb5;
+      color: #fff;
+      text-decoration: none;
+      transition: 0.3s;
+    }
+    .card a:hover { background: #019aa1; }
+
+    /* --- BOTON CV --- */
+    .cv-btn {
+      display: block;
+      width: fit-content;
+      margin: 30px auto 0;
+      padding: 12px 25px;
+      border-radius: 30px;
+      background: #00adb5;
+      color: #fff;
       text-decoration: none;
       font-weight: bold;
       transition: 0.3s;
     }
-    a:hover {
-      background: #0077cc;
-      color: #fff;
+
+    .cv-btn:hover { background: #019aa1; transform: translateY(-3px); }
+
+    /* --- CONTACTO --- */
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      margin-top: 20px;
     }
+
+    input, textarea {
+      padding: 12px;
+      border-radius: 10px;
+      border: none;
+      outline: none;
+      font-size: 1rem;
+    }
+
+    button {
+      padding: 12px;
+      border: none;
+      border-radius: 30px;
+      background: #00adb5;
+      color: #fff;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    button:hover { background: #019aa1; }
+
+    footer {
+      text-align: center;
+      padding: 40px 20px;
+      font-size: 0.9rem;
+      color: #aaa;
+    }
+
+    /* Animaciones */
+    @keyframes fadeSlideDown { to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeSlideUp { to { opacity: 1; transform: translateY(0); } }
   </style>
 </head>
 <body>
-  <h1>Bienvenido a mi Portafolio</h1>
-  <p>Esta es una página de prueba para erfsdfsdf.org</p>
-  <a href="/gitweb/">Acceder a mi proyecto GitWeb</a>
+  <header>
+    <h1>Hola, soy Marc</h1>
+    <p>Ingeniero Informático | Desarrollador Fullstack | Orientado a Soluciones Óptimas</p>
+  </header>
+
+  <nav>
+    <a href="#sobre-mi">Sobre mí</a>
+    <a href="#habilidades">Habilidades</a>
+    <a href="#proyectos">Proyectos</a>
+    <a href="#contacto">Contacto</a>
+  </nav>
+
+  <!-- SOBRE MI -->
+  <section id="sobre-mi" class="about">
+    <img src="foto.jpg" alt="Foto de Marc">
+    <div class="about-text">
+      <h2>👨‍💻 Sobre mí</h2>
+      <p>
+        Soy un desarrollador fullstack con experiencia en <strong>backend</strong>, 
+        <strong>frontend</strong> y <strong>bases de datos</strong>. 
+        Me apasiona crear soluciones eficientes, escalables y con buen diseño. 
+        Disfruto tanto del código limpio como de la optimización del mismo. 
+        <br> Amplio conocimiento en estructuras de datos, lenguajes formales y computación.
+      </p>
+
+      <div class="experience">
+        <h3>Experiencia profesional:</h3>
+
+        <div class="experience-item">
+          <strong>Prácticas Ingeniero Informático, VickyFoods, Gandia</strong><br>
+          <em>Febrero 2023 - Junio 2023</em>
+          <ul>
+            <li>Diseño, gestión y optimización de bases de datos (SQL) en función de las necesidades de negocio.</li>
+            <li>Desarrollo y mantenimiento de aplicaciones internas utilizando JavaScript, HTML y CSS.</li>
+            <li>Soporte técnico en actualización de software y mantenimiento de equipos.</li>
+            <li>Automatización y mejora de procesos mediante Python, incrementando la eficiencia en tareas recurrentes.</li>
+          </ul>
+        </div>
+
+        <div class="experience-item">
+          <strong>Ingeniero Informático, NTT Data (Proyecto IVIRMA), Valencia</strong><br>
+          <em>Octubre 2024 - Actualmente</em>
+          <ul>
+            <li>Líder de equipo de implantación tecnológica en nuevas clínicas, coordinando la integración de sistemas y aplicaciones.</li>
+            <li>Desarrollo y optimización de bases de datos SQL para la gestión de información clínica y administrativa.</li>
+            <li>Implementación y mantenimiento de aplicaciones internas utilizando JavaScript, CSS y otras tecnologías web.</li>
+            <li>Uso de Git para control de versiones y trabajo colaborativo en proyectos.</li>
+            <li>Colaboración con dirección de clínicas para adaptar soluciones tecnológicas a las necesidades del negocio.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HABILIDADES -->
+  <section id="habilidades" class="skills">
+    <h2>⚡ Habilidades Técnicas</h2>
+    <div class="skills-grid">
+      <span class="skill">HTML</span>
+      <span class="skill">CSS</span>
+      <span class="skill">JavaScript</span>
+      
+      <span class="skill">Node.js</span>
+      <span class="skill">Python</span>
+      <span class="skill">Flask</span>
+      <span class="skill">SQL</span>
+      <span class="skill">Git / GitHub</span>
+    </div>
+    <a href="cv.pdf" download class="cv-btn">📄 Descargar CV</a>
+  </section>
+
+  <!-- PROYECTOS -->
+  <section id="proyectos">
+    <h2 style="text-align:center;">📂 Mis Proyectos</h2>
+    <div class="projects">
+      <div class="card">
+        <h3>Proyecto 1</h3>
+        <p>Descripción breve de lo que hace este proyecto.</p>
+        <a href="#">Ver más</a>
+      </div>
+      <div class="card">
+        <h3>Proyecto 2</h3>
+        <p>Descripción breve de lo que hace este proyecto.</p>
+        <a href="#">Ver más</a>
+      </div>
+      <div class="card">
+        <h3>Proyecto 3</h3>
+        <p>Descripción breve de lo que hace este proyecto.</p>
+        <a href="#">Ver más</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTACTO -->
+  <section id="contacto">
+    <h2>📩 Contacto</h2>
+    <p>Si quieres hablar conmigo, escríbeme directamente o usa este formulario:</p>
+    <form>
+      <input type="text" placeholder="Tu nombre" required>
+      <input type="email" placeholder="Tu email" required>
+      <textarea rows="5" placeholder="Tu mensaje..." required></textarea>
+      <button type="submit">Enviar</button>
+    </form>
+    <p style="margin-top:20px;">También puedes encontrarme en:</p>
+    <ul>
+      <li>Email: <a href="mailto:tucorreo@ejemplo.com">mmestregisbert@gmail.com</a></li>
+      <li>LinkedIn: <a href="www.linkedin.com/in/marc-mestre-gisbert-0b4902257">www.linkedin.com/in/marc-mestre-gisbert</a></li>
+      <li>GitHub: <a href="#">github.com/marcmmestre</a></li>
+    </ul>
+  </section>
+
+  <footer>
+    <p>© 2025 Marc - Todos los derechos reservados</p>
+  </footer>
+
+  <script>
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) entry.target.classList.add('show');
+      });
+    }, { threshold: 0.2 });
+
+    document.querySelectorAll('section, .card').forEach(el => observer.observe(el));
+  </script>
 </body>
 </html>
