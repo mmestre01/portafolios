@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify
 from app.database import get_db
 
 bp2 = Blueprint('repos', __name__, url_prefix='/repos')
-@bp2.route("/repos/<int:repo_id>/branches", methods=["GET"])
+@bp2.route("/<int:repo_id>/branches", methods=["GET"])
 def get_branches(repo_id):
     conn = get_db()
     cursor = conn.cursor()
@@ -75,7 +75,7 @@ def delete_repo(repo_id):
     db.commit()
     return jsonify({'message': 'Repositorio eliminado correctamente'})
 
-@bp2.route("/repos/<int:repo_id>/branches", methods=["POST"])
+@bp2.route("/<int:repo_id>/branches", methods=["POST"])
 def create_branch(repo_id):
     data = request.json
     name = data.get("name")

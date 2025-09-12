@@ -18,10 +18,10 @@ app.register_blueprint(bp_branches,url_prefix="/api/branches")
 
 # Inicializar la base de datos con todas las tablas
 init_db(app)
-@app.route("/")
-def index():
-    return "Bienvenido a mi app Flask 🚀"
+#@app.route("/")
+#def index():
+#    return "Bienvenido a mi app Flask 🚀"
 if __name__ == '__main__':
     for rule in app.url_map.iter_rules():
         print(rule)
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)

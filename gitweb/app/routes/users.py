@@ -6,7 +6,7 @@ from flask import Blueprint, request, jsonify
 
 bp = Blueprint('users', __name__, url_prefix='/users')
 
-@bp.route('/', methods=['GET'])
+@bp.route('/', methods=['GET'], strict_slashes=False)
 def list_users():
     db = get_db()
     users = db.execute(
@@ -22,7 +22,7 @@ def list_users():
         for user in users
     ])
 
-@bp.route('/', methods=['POST'])
+@bp.route('/', methods=['POST'], strict_slashes=False)
 def create_user():
     data = request.get_json()
     username = data.get('username')
@@ -46,7 +46,7 @@ def create_user():
 
     return jsonify({'message': 'Usuario creado correctamente'}), 201
 
-@bp.route('/login', methods=['POST'])
+@bp.route('/login', methods=['POST'], strict_slashes=False)
 def login():
     data = request.get_json()
     username = data.get('username')

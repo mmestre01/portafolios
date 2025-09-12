@@ -1,0 +1,13 @@
+[2025-09-11 12:38:37 +0200] [23651] [INFO] Starting gunicorn 23.0.0
+[2025-09-11 12:38:37 +0200] [23651] [INFO] Listening at: http://127.0.0.1:5000 (23651)
+[2025-09-11 12:38:37 +0200] [23651] [INFO] Using worker: sync
+[2025-09-11 12:38:37 +0200] [23657] [INFO] Booting worker with pid: 23657
+[2025-09-11 12:38:37 +0200] [23658] [INFO] Booting worker with pid: 23658
+[2025-09-11 12:38:37 +0200] [23659] [INFO] Booting worker with pid: 23659
+[2025-09-11 12:39:16 +0200] [23657] [INFO] Worker exiting (pid: 23657)
+[2025-09-11 12:39:16 +0200] [23658] [INFO] Worker exiting (pid: 23658)
+[2025-09-11 12:39:16 +0200] [23651] [INFO] Handling signal: term
+[2025-09-11 12:39:16 +0200] [23659] [INFO] Worker exiting (pid: 23659)
+[2025-09-11 12:39:16 +0200] [23651] [ERROR] Worker (pid:23658) was sent SIGTERM!
+[2025-09-11 12:39:16 +0200] [23651] [ERROR] Worker (pid:23657) was sent SIGTERM!
+[2025-09-11 12:39:16 +0200] [23651] [INFO] Shutting down: Master

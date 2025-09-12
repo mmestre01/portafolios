@@ -44,7 +44,7 @@ const Dashboard = () => {
 
   const deleteRepo = async (id) => {
     try {
-      await axios.delete(`${API_URL}/repos/delete/${id}`);
+      await axios.delete(`${API_URL}/repos/delete/${id}/`);
       fetchRepos();
     } catch (err) {
       console.error("Error eliminando repositorio:", err);

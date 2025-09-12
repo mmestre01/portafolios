@@ -4,10 +4,11 @@ set -e
 # -----------------------------
 # RUTAS PRINCIPALES
 # -----------------------------
-BASE_DIR="/home/mmestre01/Desktop/portafolis"       # Carpeta padre
-FRONTEND_DIR="$BASE_DIR/gitweb/gitweb-frontend"    # React GitWeb
-BACKEND_DIR="$BASE_DIR"                             # Flask backend
-LANDING_FILE="$BASE_DIR/index.html"                # Landing principal
+BASE_DIR="/home/mmestre01/Desktop/portafolis"            # Carpeta padre
+GITWEB_DIR="$BASE_DIR/gitweb"                            # Carpeta GitWeb
+FRONTEND_DIR="$GITWEB_DIR/gitweb-frontend"              # React frontend
+BACKEND_DIR="$GITWEB_DIR"                               # Flask backend
+LANDING_FILE="$BASE_DIR/index.html"                     # Landing principal
 
 echo "🚀 Iniciando despliegue..."
 
@@ -36,6 +37,7 @@ echo "✅ Frontend React desplegado en /gitweb"
 # NGINX
 # -----------------------------
 echo "🔄 Reiniciando nginx..."
+sudo nginx -t
 sudo systemctl restart nginx
 echo "✅ Nginx reiniciado."
 
@@ -49,7 +51,7 @@ source venv/bin/activate
 # Matamos cualquier Gunicorn anterior
 pkill -f "gunicorn.*main:app" || true
 
-# Levantamos Gunicorn en background para que no bloquee
+# Levantamos Gunicorn en background
 gunicorn --bind 127.0.0.1:5000 main:app --workers 3 --daemon
 echo "✅ Backend iniciado con Gunicorn."
 
