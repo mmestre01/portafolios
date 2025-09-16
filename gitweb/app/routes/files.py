@@ -4,45 +4,161 @@ from app.database import get_db
 
 bp4 = Blueprint('files', __name__, url_prefix='/files')
 
+import os
+
+import os
+
 @bp4.route('/<int:repo_id>', methods=['GET'])
-def list_files(repo_id):
-    path = request.args.get('path', '')
+def get_files(repo_id):
+    branch_name = request.args.get("branch")
+    path = request.args.get("path", "")
 
     db = get_db()
     cursor = db.cursor()
 
-    # Traemos la última versión de cada archivo del repo
-    cursor.execute("""
-        SELECT f.path, f.content FROM files f
-        JOIN commits c ON f.commit_id = c.id
-        WHERE c.repo_id = ?
-        AND f.id IN (
-            SELECT MAX(f2.id)
-            FROM files f2
-            JOIN commits c2 ON f2.commit_id = c2.id
-            WHERE c2.repo_id = ?
-            GROUP BY f2.path
-        )
-    """, (repo_id, repo_id))
+    # 1. Buscar branch_id
+    cursor.execute("SELECT id FROM branches WHERE repo_id=? AND name=?", (repo_id, branch_name))
+    branch = cursor.fetchone()
+    if not branch:
+        return jsonify([])  # rama no encontrada
+    branch_id = branch["id"]
 
-    all_files = cursor.fetchall()
-    result = []
-    paths_seen = set()
+    # 2. Buscar todos los commits de esa rama (ordenados por id ascendente = histórico)
+    cursor.execute(
+        "SELECT id FROM commits WHERE repo_id=? AND branch_id=? ORDER BY id ASC",
+        (repo_id, branch_id)
+    )
+    commits = cursor.fetchall()
+    if not commits:
+        return jsonify([])
 
-    for f in all_files:
-        file_path = f['path']
-        if not file_path.startswith(path):
+    # 3. Construir snapshot final = última versión de cada archivo
+    snapshot = {}
+    for c in commits:
+        commit_id = c["id"]
+        cursor.execute("SELECT path, content FROM files WHERE commit_id=?", (commit_id,))
+        files = cursor.fetchall()
+        for f in files:
+            snapshot[f["path"]] = f["content"]  # sobrescribe versiones anteriores
+
+    # 4. Filtrar por carpeta actual (como GitHub)
+    items = {}
+    for raw_path, content in snapshot.items():
+        # calcular la ruta relativa a `path`
+        relative_path = raw_path[len(path):].lstrip("/") if path else raw_path
+        if not relative_path:
             continue
-        relative_path = file_path[len(path):].strip('/')
-        if '/' in relative_path:
-            folder = relative_path.split('/')[0]
-            if folder not in paths_seen:
-                result.append({"name": folder, "path": f"{path}/{folder}".strip('/'), "type": "folder"})
-                paths_seen.add(folder)
-        else:
-            result.append({"name": relative_path, "path": file_path, "type": "file"})
 
-    return jsonify(result)
+        parts = relative_path.split("/", 1)
+        name = parts[0]
+
+        if len(parts) > 1:
+            # es carpeta
+            items[name] = {
+                "path": f"{path}/{name}".strip("/"),
+                "name": name,
+                "type": "folder"
+            }
+        else:
+            # es archivo
+            items[name] = {
+                "path": raw_path,
+                "name": name,
+                "type": "file",
+                "content": content
+            }
+
+    return jsonify(list(items.values()))
+
+
+import io, zipfile
+from flask import send_file
+
+import io, zipfile, sys
+from flask import send_file
+
+import io, zipfile
+from flask import send_file, Response
+
+import io, zipfile, os
+from flask import send_file, jsonify
+from app.database import get_db
+
+import io, zipfile, os, tempfile
+from flask import send_file, jsonify
+from app.database import get_db
+
+@bp4.route('/<int:repo_id>/download', methods=['GET'])
+def download_repo(repo_id):
+    branch_name = request.args.get("branch")
+
+    db = get_db()
+    cursor = db.cursor()
+
+    # Buscar branch_id
+    cursor.execute("SELECT id FROM branches WHERE repo_id=? AND name=?", (repo_id, branch_name))
+    branch = cursor.fetchone()
+    if not branch:
+        return jsonify({'error': 'Branch not found'}), 404
+    branch_id = branch["id"]
+
+    # Buscar commits de esa rama
+    cursor.execute(
+        "SELECT id FROM commits WHERE repo_id=? AND branch_id=? ORDER BY id ASC",
+        (repo_id, branch_id)
+    )
+    commits = cursor.fetchall()
+    if not commits:
+        return jsonify({'error': 'No commits in branch'}), 404
+
+    # Construir snapshot con última versión de cada archivo
+    snapshot = {}
+    for c in commits:
+        commit_id = c["id"]
+        cursor.execute("""
+            SELECT f.path, f.content
+            FROM files f
+            JOIN commits c ON f.commit_id = c.id
+            WHERE f.commit_id=? AND c.repo_id=?
+        """, (commit_id, repo_id))
+        for f in cursor.fetchall():
+            snapshot[f["path"]] = f["content"]
+
+    if not snapshot:
+        return jsonify({'error': 'No files found in branch'}), 404
+
+    # Crear archivo temporal para el ZIP
+    tmp_zip = tempfile.NamedTemporaryFile(delete=False, suffix=".zip")
+    zip_path = tmp_zip.name
+    tmp_zip.close()
+
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+        for path, content in snapshot.items():
+            if not path:
+                continue
+
+            if content is None:
+                content = ""
+            if isinstance(content, str):
+                content = content.encode("utf-8")
+
+            norm_path = path.strip("/")
+            print(f"DEBUG: escribiendo en ZIP {norm_path}")
+            zf.writestr(norm_path, content)
+
+    return send_file(
+        zip_path,
+        mimetype="application/zip",
+        as_attachment=True,
+        download_name=f"repo_{repo_id}_{branch_name}.zip"
+    )
+
+
+
+
+
+    
+
 
 @bp4.route('/files/<int:repo_id>/history', methods=['GET'])
 def file_history(repo_id):

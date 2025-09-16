@@ -42,6 +42,14 @@ CREATE TABLE IF NOT EXISTS repositories (
     owner_id INTEGER NOT NULL,
     FOREIGN KEY (owner_id) REFERENCES users(id)
 );
+CREATE TABLE IF NOT EXISTS repo_collaborators (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    repo_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    role TEXT DEFAULT 'collaborator',
+    FOREIGN KEY (repo_id) REFERENCES repos(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
 
 
 CREATE TABLE IF NOT EXISTS commits (

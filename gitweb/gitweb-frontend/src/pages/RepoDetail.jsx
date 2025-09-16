@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 const API_URL = process.env.REACT_APP_API_URL;
 
@@ -87,6 +87,7 @@ const styles = {
     marginTop: 20,
     display: "flex",
     gap: 12,
+    flexWrap: "wrap",
   },
   buttonPrimary: {
     backgroundColor: "#28a745",
@@ -127,16 +128,30 @@ const styles = {
     fontFamily: "monospace",
     whiteSpace: "pre-wrap",
   },
-  branchBar: {
+  branchCard: {
+    marginTop: 20,
+    background: "white",
+    padding: 20,
+    borderRadius: 8,
+    boxShadow: "0 1px 3px rgba(27,31,35,.1)",
     display: "flex",
     alignItems: "center",
-    gap: 10,
-    marginBottom: 20,
+    gap: 12,
+    flexWrap: "wrap",
+  },
+  conflictBox: {
+    marginTop: 20,
+    padding: 12,
+    border: "1px solid #d73a49",
+    backgroundColor: "#ffeef0",
+    borderRadius: 6,
+    color: "#86181d",
   },
 };
 
 const RepoDetail = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [repo, setRepo] = useState(null);
   const [files, setFiles] = useState([]);
   const [fileContent, setFileContent] = useState("");
@@ -149,21 +164,28 @@ const RepoDetail = () => {
   const [activeTab, setActiveTab] = useState("code");
   const [loading, setLoading] = useState(true);
   const [expandedFolders, setExpandedFolders] = useState({});
-
-  // NUEVO: ramas
   const [branches, setBranches] = useState([]);
-  const [currentBranch, setCurrentBranch] = useState("main");
+  const [currentBranch, setCurrentBranch] = useState("");
   const [newBranch, setNewBranch] = useState("");
+  const [mergeTarget, setMergeTarget] = useState("");
+  const [conflicts, setConflicts] = useState([]);
+
+  // colaboradores
+  const [collaborators, setCollaborators] = useState([]);
+  const [newCollaborator, setNewCollaborator] = useState("");
+
+  // editar descripción
+  const [editingDesc, setEditingDesc] = useState(false);
+  const [descValue, setDescValue] = useState("");
 
   useEffect(() => {
     async function fetchRepo() {
       try {
         const repoRes = await axios.get(`${API_URL}/repos/${id}`);
         setRepo(repoRes.data);
-
+        setDescValue(repoRes.data.description || "");
         await fetchBranches();
-
-        await fetchFilesAndCommits(currentBranch);
+        await fetchCollaborators();
       } catch (err) {
         console.error(err);
       } finally {
@@ -173,13 +195,20 @@ const RepoDetail = () => {
     fetchRepo();
   }, [id]);
 
+  useEffect(() => {
+    if (currentBranch) {
+      fetchFilesAndCommits(currentBranch);
+      setSelectedPath("");
+      setFileContent("");
+      setExpandedFolders({});
+    }
+  }, [currentBranch]);
+
   const fetchBranches = async () => {
     try {
       const res = await axios.get(`${API_URL}/branches/${id}`);
       setBranches(res.data);
-
-      // Guarda solo el nombre de la rama como currentBranch
-      if (res.data.length > 0 && currentBranch !== res.data[0].name) {
+      if (!currentBranch && res.data.length > 0) {
         setCurrentBranch(res.data[0].name);
       }
     } catch (err) {
@@ -187,12 +216,49 @@ const RepoDetail = () => {
     }
   };
 
+  const fetchCollaborators = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/repos/${id}/collaborators`);
+      setCollaborators(res.data);
+    } catch (err) {
+      console.error("Error cargando colaboradores", err);
+    }
+  };
+
+  const addCollaborator = async () => {
+    if (!newCollaborator) return;
+    try {
+      await axios.post(`${API_URL}/repos/${id}/collaborators`, { username: newCollaborator });
+      setNewCollaborator("");
+      fetchCollaborators();
+    } catch {
+      alert("Error añadiendo colaborador");
+    }
+  };
+
+  const removeCollaborator = async (userId) => {
+    try {
+      await axios.delete(`${API_URL}/repos/${id}/collaborators/${userId}`);
+      fetchCollaborators();
+    } catch {
+      alert("Error eliminando colaborador");
+    }
+  };
+
+  const updateDescription = async () => {
+    try {
+      await axios.put(`${API_URL}/repos/${id}`, { description: descValue });
+      setRepo((prev) => ({ ...prev, description: descValue }));
+      setEditingDesc(false);
+    } catch {
+      alert("Error actualizando descripción");
+    }
+  };
 
   const fetchFilesAndCommits = async (branch) => {
     try {
       const filesRes = await axios.get(`${API_URL}/files/${id}?path=&branch=${branch}`);
       setFiles(filesRes.data);
-
       const commitsRes = await axios.get(`${API_URL}/repos/${id}/commits?branch=${branch}`);
       setCommits(commitsRes.data);
     } catch (err) {
@@ -200,27 +266,18 @@ const RepoDetail = () => {
     }
   };
 
-  const changeBranch = async (branch) => {
-    setCurrentBranch(branch);
-    await fetchFilesAndCommits(branch);
+  const changeBranch = (branch) => setCurrentBranch(branch);
+
+  const createBranch = async (branchName) => {
+    if (!branchName) return alert("Debes poner un nombre de rama");
+    try {
+      await axios.post(`${API_URL}/branches/create`, { repo_id: id, name: branchName });
+      setNewBranch("");
+      fetchBranches();
+    } catch {
+      alert("Error creando rama");
+    }
   };
-
-const createBranch = async (branchName) => {
-  if (!branchName) return alert("Debes poner un nombre de rama");
-
-  try {
-    await axios.post(`${API_URL}/branches/create`, {
-      repo_id: id,   // id del repo actual
-      name: branchName // solo el string
-    });
-    fetchBranches(); // refrescar la lista
-  } catch (err) {
-    console.error("Error creando rama", err.response?.data || err);
-    alert("Error creando rama: " + (err.response?.data?.error || err.message));
-  }
-};
-
-
 
   const fetchFolderContent = async (path) => {
     if (expandedFolders[path]) {
@@ -230,8 +287,7 @@ const createBranch = async (branchName) => {
     try {
       const res = await axios.get(`${API_URL}/files/${id}?path=${encodeURIComponent(path)}&branch=${currentBranch}`);
       setExpandedFolders((prev) => ({ ...prev, [path]: res.data }));
-    } catch (err) {
-      console.error(err);
+    } catch {
       alert("No se pudo cargar la carpeta");
     }
   };
@@ -241,18 +297,24 @@ const createBranch = async (branchName) => {
     try {
       const res = await axios.get(`${API_URL}/files/${id}/file?path=${encodeURIComponent(path)}&branch=${currentBranch}`);
       setFileContent(res.data.content);
-    } catch (err) {
-      console.error(err);
+    } catch {
       alert("No se pudo cargar el archivo");
     }
   };
 
+  const downloadFile = (filename, content) => {
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleFileSelect = (e) => {
     const files = Array.from(e.target.files);
-    const formatted = files.map((f) => ({
-      file: f,
-      path: f.webkitRelativePath || f.name,
-    }));
+    const formatted = files.map((f) => ({ file: f, path: f.webkitRelativePath || f.name }));
     setSelectedFiles((prev) => [...prev, ...formatted]);
   };
 
@@ -262,17 +324,11 @@ const createBranch = async (branchName) => {
 
   const createCommit = async () => {
     if (!commitMessage || selectedFiles.length === 0) {
-      alert("Debes poner un mensaje y seleccionar al menos un archivo.");
-      return;
+      return alert("Debes poner un mensaje y seleccionar al menos un archivo.");
     }
-
     const filesData = await Promise.all(
-      selectedFiles.map(async (f) => {
-        const content = await f.file.text();
-        return { path: f.path, content };
-      })
+      selectedFiles.map(async (f) => ({ path: f.path, content: await f.file.text() }))
     );
-
     try {
       await axios.post(`${API_URL}/commits/create`, {
         repo_id: id,
@@ -282,45 +338,49 @@ const createBranch = async (branchName) => {
       });
       setCommitMessage("");
       setSelectedFiles([]);
-      await fetchFilesAndCommits(currentBranch);
-      alert("Commit creado correctamente");
-    } catch (err) {
-      console.error("Error creando commit", err);
+      fetchFilesAndCommits(currentBranch);
+    } catch {
       alert("Error al crear commit");
     }
   };
 
-  const toggleCommitExpand = async (commitId) => {
-    if (expandedCommit === commitId) {
-      setExpandedCommit(null);
-      return;
+  const mergeBranches = async () => {
+    if (!mergeTarget) return alert("Debes seleccionar la rama destino");
+    try {
+      const res = await axios.post(`${API_URL}/commits/merge`, {
+        repo_id: id,
+        source_branch: currentBranch,
+        target_branch: mergeTarget,
+      });
+      setConflicts(res.data.conflicts || []);
+      alert("Merge completado");
+      await fetchFilesAndCommits(currentBranch);
+    } catch (err) {
+      alert("Error en merge: " + (err.response?.data?.error || err.message));
     }
+  };
+
+  const toggleCommitExpand = async (commitId) => {
+    if (expandedCommit === commitId) return setExpandedCommit(null);
     try {
       const res = await axios.get(`${API_URL}/commits/${commitId}/files?branch=${currentBranch}`);
       setExpandedCommit({ id: commitId, files: res.data });
       setExpandedFile(null);
-    } catch (err) {
-      console.error("Error cargando archivos del commit", err);
-    }
+    } catch {}
   };
 
   const toggleFileExpand = async (commitId, path) => {
-    if (expandedFile?.path === path) {
-      setExpandedFile(null);
-      return;
-    }
+    if (expandedFile?.path === path) return setExpandedFile(null);
     try {
       const res = await axios.get(
         `${API_URL}/files/${id}/file?path=${encodeURIComponent(path)}&branch=${currentBranch}`
       );
       setExpandedFile({ commitId, path, content: res.data.content });
-    } catch (err) {
-      console.error("Error cargando contenido del archivo", err);
-    }
+    } catch {}
   };
 
-  const renderFiles = (filesList) => {
-    return filesList.map((f) => (
+  const renderFiles = (filesList) =>
+    filesList.map((f) => (
       <div key={f.path}>
         {f.type === "folder" ? (
           <div style={styles.fileItem} onClick={() => fetchFolderContent(f.path)}>
@@ -332,26 +392,136 @@ const createBranch = async (branchName) => {
           </div>
         )}
         {f.type === "folder" && expandedFolders[f.path] && (
-          <div style={styles.folderChildren}>
-            {renderFiles(expandedFolders[f.path])}
-          </div>
+          <div style={styles.folderChildren}>{renderFiles(expandedFolders[f.path])}</div>
         )}
       </div>
     ));
-  };
 
   if (loading) return <div style={{ padding: 20 }}>Cargando...</div>;
   if (!repo) return <div style={{ padding: 20, color: "red" }}>Repositorio no encontrado</div>;
 
   return (
     <div style={styles.container}>
+      {/* 🔙 Volver */}
+      <button
+        style={{ ...styles.buttonSecondary, marginBottom: 15 }}
+        onClick={() => navigate("/repos")}
+      >
+        ⬅️ Volver al listado
+      </button>
+
       <header style={styles.header}>
         <div style={styles.repoName}>
           {repo.owner_username} / {repo.name}
         </div>
-        <div style={styles.description}>{repo.description || "Sin descripción"}</div>
+
+        {/* ✏️ Editable descripción */}
+        {!editingDesc ? (
+          <div style={styles.description}>
+            {repo.description || "Sin descripción"}{" "}
+            <button
+              style={{
+                border: "none",
+                background: "transparent",
+                cursor: "pointer",
+                color: "#0366d6",
+              }}
+              onClick={() => setEditingDesc(true)}
+            >
+              ✏️
+            </button>
+          </div>
+        ) : (
+          <div style={{ marginTop: 10 }}>
+            <textarea
+              style={styles.textarea}
+              value={descValue}
+              onChange={(e) => setDescValue(e.target.value)}
+            />
+            <div style={{ marginTop: 6, display: "flex", gap: 10 }}>
+              <button style={styles.buttonPrimary} onClick={updateDescription}>
+                💾 Guardar
+              </button>
+              <button
+                style={styles.buttonSecondary}
+                onClick={() => {
+                  setEditingDesc(false);
+                  setDescValue(repo.description || "");
+                }}
+              >
+                ❌ Cancelar
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* 👥 Colaboradores */}
+        <div
+          style={{
+            marginTop: 20,
+            background: "white",
+            padding: 20,
+            borderRadius: 8,
+            boxShadow: "0 1px 3px rgba(27,31,35,.1)",
+          }}
+        >
+          <h4 style={{ marginBottom: 12 }}>👥 Colaboradores</h4>
+          {collaborators.length === 0 ? (
+            <p style={{ color: "#586069" }}>No hay colaboradores.</p>
+          ) : (
+            <ul style={{ listStyle: "none", padding: 0 }}>
+              {collaborators.map((c) => (
+                <li
+                  key={c.id}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    padding: "6px 0",
+                    borderBottom: "1px solid #e1e4e8",
+                  }}
+                >
+                  <span>
+                    <b>{c.username}</b>{" "}
+                    <span style={{ color: "#6a737d" }}>({c.role})</span>
+                  </span>
+                  <button
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      color: "#d73a49",
+                      cursor: "pointer",
+                      fontSize: 14,
+                    }}
+                    onClick={() => removeCollaborator(c.id)}
+                  >
+                    ❌
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
+            <input
+              type="text"
+              placeholder="Usuario a invitar..."
+              value={newCollaborator}
+              onChange={(e) => setNewCollaborator(e.target.value)}
+              style={{
+                flex: 1,
+                padding: "8px 10px",
+                borderRadius: 6,
+                border: "1px solid #ccc",
+              }}
+            />
+            <button style={styles.buttonPrimary} onClick={addCollaborator}>
+              ➕ Añadir
+            </button>
+          </div>
+        </div>
       </header>
 
+      {/* Tabs */}
       <nav style={styles.navTabs}>
         <div
           onClick={() => setActiveTab("code")}
@@ -367,43 +537,60 @@ const createBranch = async (branchName) => {
         </div>
       </nav>
 
+      {/* Code tab */}
       {activeTab === "code" && (
         <div style={styles.filesSection}>
-          <div style={styles.branchBar}>
+          {/* 🌿 Branch selector más chulo */}
+          <div style={styles.branchCard}>
             <label>🌿 Rama actual: </label>
-<select value={currentBranch} onChange={(e) => changeBranch(e.target.value)}>
-  {branches.map((b) => (
-    <option key={b.id} value={b.name}>
-      {b.name}
-    </option>
-  ))}
-</select>
+            <select value={currentBranch} onChange={(e) => changeBranch(e.target.value)}>
+              {branches.map((b) => (
+                <option key={b.id} value={b.name}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
             <input
               type="text"
               placeholder="Nueva rama"
               value={newBranch}
               onChange={(e) => setNewBranch(e.target.value)}
             />
+            <button style={styles.buttonSecondary} onClick={() => createBranch(newBranch)}>
+              ➕ Crear rama
+            </button>
             <button
-  style={styles.buttonSecondary}
-  onClick={() => createBranch(newBranch)}
->
-  ➕ Crear rama
-</button>
-
+              style={styles.buttonPrimary}
+              onClick={() =>
+                window.open(`${API_URL}/files/${id}/download?branch=${currentBranch}`, "_blank")
+              }
+            >
+              ⬇️ Descargar repositorio
+            </button>
           </div>
 
           {files.length === 0 ? <p>No hay archivos aún.</p> : renderFiles(files)}
 
           {selectedPath && (
             <div style={{ marginTop: 20 }}>
-              <h4>Contenido de: {selectedPath}</h4>
+              <div
+                style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+              >
+                <h4 style={{ margin: 0 }}>Contenido de: {selectedPath}</h4>
+                <button
+                  style={styles.buttonSecondary}
+                  onClick={() => downloadFile(selectedPath, fileContent)}
+                >
+                  ⬇️ Descargar este archivo
+                </button>
+              </div>
               <pre style={styles.fileContentPreview}>{fileContent}</pre>
             </div>
           )}
         </div>
       )}
 
+      {/* Commits tab */}
       {activeTab === "commits" && (
         <section style={styles.filesSection}>
           <div style={styles.buttonsContainer}>
@@ -428,8 +615,7 @@ const createBranch = async (branchName) => {
             <div style={{ marginTop: 10 }}>
               {selectedFiles.map((f) => (
                 <div key={f.path}>
-                  {f.path}{" "}
-                  <button onClick={() => removeSelectedFile(f.path)}>❌</button>
+                  {f.path} <button onClick={() => removeSelectedFile(f.path)}>❌</button>
                 </div>
               ))}
             </div>
@@ -444,6 +630,50 @@ const createBranch = async (branchName) => {
           <button style={styles.buttonPrimary} onClick={createCommit}>
             ➕ Crear commit
           </button>
+
+          {/* 🔀 Merge bonito */}
+          <div
+            style={{
+              marginTop: 30,
+              padding: 20,
+              background: "#f1f8ff",
+              border: "1px solid #c8e1ff",
+              borderRadius: 8,
+            }}
+          >
+            <h4 style={{ marginTop: 0 }}>🔀 Merge de ramas</h4>
+            <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+              <label>Destino:</label>
+              <select
+                value={mergeTarget}
+                onChange={(e) => setMergeTarget(e.target.value)}
+                style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid #ccc" }}
+              >
+                <option value="">-- Selecciona rama --</option>
+                {branches
+                  .filter((b) => b.name !== currentBranch)
+                  .map((b) => (
+                    <option key={b.id} value={b.name}>
+                      {b.name}
+                    </option>
+                  ))}
+              </select>
+              <button style={styles.buttonSecondary} onClick={mergeBranches}>
+                🔀 Mergear {currentBranch} → {mergeTarget || "?"}
+              </button>
+            </div>
+            {conflicts.length > 0 && (
+              <div style={styles.conflictBox}>
+                ⚠️ Conflictos detectados en los siguientes archivos:
+                <ul>
+                  {conflicts.map((c) => (
+                    <li key={c}>{c}</li>
+                  ))}
+                </ul>
+                Revisa el contenido en la rama destino para resolverlos.
+              </div>
+            )}
+          </div>
 
           <h4 style={{ marginTop: 20 }}>Historial de commits:</h4>
           {commits.length === 0 ? (

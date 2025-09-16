@@ -318,9 +318,9 @@
     <h2 style="text-align:center;">📂 Mis Proyectos</h2>
     <div class="projects">
       <div class="card">
-        <h3>Proyecto 1</h3>
-        <p>Descripción breve de lo que hace este proyecto.</p>
-        <a href="#">Ver más</a>
+        <h3>GitWeb</h3>
+        <p>Plataforma que permite almacenar, gestionar y colaborar en proyectos de software usando un git simulado con SQL como sistema de control de versiones</p>
+        <a href="/gitweb/">Acceder</a>
       </div>
       <div class="card">
         <h3>Proyecto 2</h3>
@@ -335,26 +335,38 @@
     </div>
   </section>
 
+  
   <!-- CONTACTO -->
-  <section id="contacto">
-    <h2>📩 Contacto</h2>
-    <p>Si quieres hablar conmigo, escríbeme directamente o usa este formulario:</p>
-    <form>
-      <input type="text" placeholder="Tu nombre" required>
-      <input type="email" placeholder="Tu email" required>
-      <textarea rows="5" placeholder="Tu mensaje..." required></textarea>
-      <button type="submit">Enviar</button>
-    </form>
-    <p style="margin-top:20px;">También puedes encontrarme en:</p>
-    <ul>
-      <li>Email: <a href="mailto:tucorreo@ejemplo.com">mmestregisbert@gmail.com</a></li>
-      <li>LinkedIn: <a href="www.linkedin.com/in/marc-mestre-gisbert-0b4902257">www.linkedin.com/in/marc-mestre-gisbert</a></li>
-      <li>GitHub: <a href="#">github.com/marcmmestre</a></li>
-    </ul>
-  </section>
+<section id="contacto">
+  <h2>📩 Contacto</h2>
+  <p>Si quieres hablar conmigo, escríbeme directamente o usa este formulario:</p>
+
+  <form action="https://api.web3forms.com/submit" method="POST">
+  <!-- Tu Access Key -->
+  <input type="hidden" name="access_key" value="142ce2dd-8b69-4e4f-a8b5-c7a621dc8044">
+
+  <input type="text" name="nombre" placeholder="Tu nombre" required>
+  <input type="email" name="email" placeholder="Tu email" required>
+  <textarea name="mensaje" rows="5" placeholder="Tu mensaje..." required></textarea>
+
+  <!-- Para evitar spam -->
+  <input type="checkbox" name="botcheck" class="hidden" style="display:none;">
+
+  <button type="submit">Enviar</button>
+</form>
+
+
+  <p style="margin-top:20px;">También puedes encontrarme en:</p>
+  <ul>
+    <li>Email: <a href="mailto:mmestregisbert@gmail.com">mmestregisbert@gmail.com</a></li>
+    <li>LinkedIn: <a href="https://www.linkedin.com/in/marc-mestre-gisbert-0b4902257" target="_blank" rel="noopener noreferrer">www.linkedin.com</a></li>
+    <li>GitHub: <a href="https://github.com/mmestre01" target="_blank" rel="noopener noreferrer">github.com/mmestre01</a></li>
+  </ul>
+</section>
+
 
   <footer>
-    <p>© 2025 Marc - Todos los derechos reservados</p>
+    <p>© 2025 Marc Mestre Gisbert</p>
   </footer>
 
   <script>

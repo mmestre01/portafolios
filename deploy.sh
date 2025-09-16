@@ -4,13 +4,30 @@ set -e
 # -----------------------------
 # RUTAS PRINCIPALES
 # -----------------------------
-BASE_DIR="/home/mmestre01/Desktop/portafolis"            # Carpeta padre
-GITWEB_DIR="$BASE_DIR/gitweb"                            # Carpeta GitWeb
+BASE_DIR="/home/mmestre01/Desktop/portafolis"           # Carpeta padre
+GITWEB_DIR="$BASE_DIR/gitweb"                           # Carpeta GitWeb
 FRONTEND_DIR="$GITWEB_DIR/gitweb-frontend"              # React frontend
 BACKEND_DIR="$GITWEB_DIR"                               # Flask backend
 LANDING_FILE="$BASE_DIR/index.html"                     # Landing principal
+LOG_FILE="/home/mmestre01/cloudflared_manual.log"       # Log del túnel
 
-echo "🚀 Iniciando despliegue..."
+echo "🚀 Iniciando despliegue limpio..."
+
+# -----------------------------
+# LIMPIAR PROCESOS ANTERIORES
+# -----------------------------
+echo "🧹 Matando procesos previos..."
+
+# Gunicorn
+pkill -f "gunicorn.*main:app" || true
+
+# Cloudflared
+pkill -f "cloudflared.*tunnel" || true
+
+# Espera un poco para evitar conflictos
+sleep 2
+
+echo "✅ Procesos previos detenidos."
 
 # -----------------------------
 # LANDING PRINCIPAL
@@ -24,19 +41,29 @@ fi
 # -----------------------------
 # FRONTEND REACT (/gitweb)
 # -----------------------------
-echo "📦 Construyendo frontend React..."
+echo "📦 Reconstruyendo frontend React..."
 cd "$FRONTEND_DIR"
-npm install          # Asegurarnos de tener dependencias
-sudo rm -rf build
+
+# Forzar permisos al usuario actual
+sudo chown -R $USER:$USER build || true
+
+# Borrar build anterior si existe
+rm -rf build || true
+
+# Instalar dependencias y reconstruir
+npm install
 npm run build
+
+# Dar permisos correctos para Nginx
 sudo chown -R www-data:www-data build
 sudo chmod -R 755 build
+
 echo "✅ Frontend React desplegado en /gitweb"
 
 # -----------------------------
 # NGINX
 # -----------------------------
-echo "🔄 Reiniciando nginx..."
+echo "🔄 Reiniciando Nginx..."
 sudo nginx -t
 sudo systemctl restart nginx
 echo "✅ Nginx reiniciado."
@@ -44,28 +71,10 @@ echo "✅ Nginx reiniciado."
 # -----------------------------
 # BACKEND FLASK
 # -----------------------------
-echo "🔄 Iniciando backend..."
+echo "🔄 Iniciando backend Flask..."
 cd "$BACKEND_DIR"
 source venv/bin/activate
 
-# Matamos cualquier Gunicorn anterior
-pkill -f "gunicorn.*main:app" || true
-
-# Levantamos Gunicorn en background
-gunicorn --bind 127.0.0.1:5000 main:app --workers 3 --daemon
-echo "✅ Backend iniciado con Gunicorn."
-
-# -----------------------------
-# CLOUD FLARE TUNNEL
-# -----------------------------
-echo "🌐 Levantando Cloudflare Tunnel..."
-sudo cloudflared tunnel --config /etc/cloudflared/config.yml run raspi &
-
-# -----------------------------
-# FIN DEL DESPLIEGUE
-# -----------------------------
-IP=$(hostname -I | awk '{print $1}')
-echo "🎉 Despliegue completado."
-echo "🌐 Landing: http://$IP"
-echo "🌐 Proyecto GitWeb: http://$IP/gitweb"
-echo "🌐 No olvides que Cloudflare Tunnel debe estar activo: cloudflared tunnel run raspi"
+# Levantar Gunicorn en primer plano (logs visibles en consola)
+echo "📜 Mostrando logs de Gunicorn a continuación..."
+exec gunicorn --bind 127.0.0.1:5000 main:app --workers 3 --reload
