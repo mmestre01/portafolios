@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Inicio - API Rift{% endblock %}
+{% block content %}
+<h2>Bienvenido a API Rift</h2>
+<p>Una plataforma para apostar puntos en tus partidas de League of Legends y ver estadísticas en tiempo real.</p>
+
+{% if not session.get('user_id') %}
+    <p><a href="{{ url_for('register') }}">Crea tu cuenta</a> o <a href="{{ url_for('login') }}">inicia sesión</a> para empezar.</p>
+{% else %}
+    <h3>Accesos rápidos:</h3>
+    <ul>
+        <li><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+        <li><a href="{{ url_for('apuestas') }}">Apuestas</a></li>
+        <li><a href="{{ url_for('ranking') }}">Ranking</a></li>
+        <li><a href="{{ url_for('stats') }}">Stats</a></li>
+    </ul>
+{% endif %}
+{% endblock %}

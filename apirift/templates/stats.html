@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Stats - API Rift{% endblock %}
+{% block content %}
+
+{% if summoner_info %}
+<div class="profile-box">
+  <img src="http://ddragon.leagueoflegends.com/cdn/14.17.1/img/profileicon/{{ summoner_info.profileIconId }}.png" alt="Icono de perfil">
+  <h2>{{ summoner_info.name }}</h2>
+  <p>Nivel: {{ summoner_info.summonerLevel }}</p>
+</div>
+{% endif %}
+
+{% if elo_data %}
+<div class="elo-box">
+  <h3>Elo actual</h3>
+  <p><strong>{{ elo_data.tier }} {{ elo_data.rank }}</strong> - {{ elo_data.lp }} LP</p>
+  <p>Victorias: {{ elo_data.wins }} | Derrotas: {{ elo_data.losses }} | Winrate: {{ elo_data.winrate }}</p>
+</div>
+{% endif %}
+
+{% if match_details %}
+<h3>Últimas partidas</h3>
+<table>
+  <tr>
+    <th>Resultado</th>
+    <th>Campeón</th>
+    <th>KDA</th>
+    <th>Daño</th>
+    <th>Fecha</th>
+  </tr>
+  {% for m in match_details %}
+  <tr>
+    <td>{{ m.result }}</td>
+    <td>{{ m.champion }}</td>
+    <td>{{ m.kda }}</td>
+    <td>{{ m.damage }}</td>
+    <td>{{ m.date }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+
+{% endblock %}

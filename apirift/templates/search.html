@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Buscar jugador - API Rift{% endblock %}
+{% block content %}
+
+<h2>Buscar jugador</h2>
+<form method="POST">
+  <label>Nombre Invocador:</label>
+  <input type="text" name="summoner_name" placeholder="Ej: mmestre01" required>
+  <label>Tagline:</label>
+  <input type="text" name="tagline" placeholder="Ej: EUW" required>
+  <label>Número de partidas:</label>
+  <input type="number" name="match_count" value="5" min="1" max="20">
+  <button type="submit">Buscar</button>
+</form>
+
+<hr>
+
+{% if summoner_info %}
+<div class="profile-box">
+  <img src="http://ddragon.leagueoflegends.com/cdn/14.17.1/img/profileicon/{{ summoner_info.profileIconId }}.png" alt="Icono de perfil">
+  <h3>{{ summoner_info.name }} (Nivel {{ summoner_info.summonerLevel }})</h3>
+</div>
+{% endif %}
+
+{% if elo_data %}
+<div class="elo-box">
+  <h3>Elo actual</h3>
+  <p><strong>{{ elo_data.tier }} {{ elo_data.rank }}</strong> - {{ elo_data.lp }} LP</p>
+  <p>Victorias: {{ elo_data.wins }} | Derrotas: {{ elo_data.losses }} | Winrate: {{ elo_data.winrate }}</p>
+</div>
+{% endif %}
+
+{% if match_details %}
+<h3>Últimas partidas</h3>
+<table>
+  <tr>
+    <th>Resultado</th>
+    <th>Campeón</th>
+    <th>KDA</th>
+    <th>Daño</th>
+    <th>Fecha</th>
+  </tr>
+  {% for m in match_details %}
+  <tr>
+    <td>{{ m.result }}</td>
+    <td>{{ m.champion }}</td>
+    <td>{{ m.kda }}</td>
+    <td>{{ m.damage }}</td>
+    <td>{{ m.date }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+
+{% endblock %}

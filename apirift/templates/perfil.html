@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Perfil - API Rift{% endblock %}
+{% block content %}
+<h2>Configurar tu invocador</h2>
+<form method="POST">
+    <label>Nombre de invocador:</label>
+    <input type="text" name="summoner_name" value="{{ user.summoner_name or '' }}" required>
+
+    <label>Tagline (ej: EUW, LAS, NA):</label>
+    <input type="text" name="tagline" value="{{ user.tagline or '' }}" required>
+
+    <button type="submit">Guardar</button>
+</form>
+{% endblock %}

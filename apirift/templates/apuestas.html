@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Apuestas - API Rift{% endblock %}
+{% block content %}
+<h2>Apuestas</h2>
+<p>Aquí podrás apostar tus puntos en tu partida actual.</p>
+<form method="POST" action="#">
+  <label>Tipo de apuesta:</label>
+  <select name="apuesta_tipo">
+    <option value="ganar">Ganar</option>
+    <option value="perder">Perder</option>
+  </select>
+  <label>Puntos a apostar:</label>
+  <input type="number" name="puntos_apostados" min="1">
+  <button type="submit">Apostar</button>
+</form>
+{% endblock %}

@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - API Rift{% endblock %}
+{% block content %}
+<h2>Hola, {{ user.username }} 👋</h2>
+<p>Bienvenido a tu panel de control.</p>
+
+<h3>Opciones disponibles:</h3>
+<ul>
+    <li><a href="{{ url_for('apuestas') }}">Apuestas</a> → Apuesta puntos en tus partidas en curso.</li>
+    <li><a href="{{ url_for('ranking') }}">Ranking</a> → Consulta el ranking de Elo de todos los usuarios.</li>
+    <li><a href="{{ url_for('stats') }}">Stats</a> → Mira tus estadísticas recientes en LoL.</li>
+</ul>
+{% endblock %}
