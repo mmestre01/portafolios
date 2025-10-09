@@ -1,43 +1,69 @@
 {% extends "base.html" %}
-{% block title %}Stats - API Rift{% endblock %}
+{% block title %}Stats — API Rift{% endblock %}
 {% block content %}
 
-{% if summoner_info %}
-<div class="profile-box">
-  <img src="http://ddragon.leagueoflegends.com/cdn/14.17.1/img/profileicon/{{ summoner_info.profileIconId }}.png" alt="Icono de perfil">
-  <h2>{{ summoner_info.name }}</h2>
-  <p>Nivel: {{ summoner_info.summonerLevel }}</p>
-</div>
-{% endif %}
+<div class="grid cols-2">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Perfil de invocador</div>
+    </div>
 
-{% if elo_data %}
-<div class="elo-box">
-  <h3>Elo actual</h3>
-  <p><strong>{{ elo_data.tier }} {{ elo_data.rank }}</strong> - {{ elo_data.lp }} LP</p>
-  <p>Victorias: {{ elo_data.wins }} | Derrotas: {{ elo_data.losses }} | Winrate: {{ elo_data.winrate }}</p>
-</div>
-{% endif %}
+    {% if summoner_info %}
+      <div class="flex">
+        <img src="http://ddragon.leagueoflegends.com/cdn/14.17.1/img/profileicon/{{ summoner_info.profileIconId }}.png"
+             alt="Icono" style="width:64px;height:64px;border-radius:12px;border:1px solid var(--border)">
+        <div>
+          <h3 class="mt-0">{{ summoner_info.name }}</h3>
+          <p class="text-muted mt-0">Nivel {{ summoner_info.summonerLevel }}</p>
+        </div>
+      </div>
+    {% else %}
+      <p class="text-muted">Todavía no hemos cargado tu perfil de LoL.</p>
+    {% endif %}
+  </div>
 
-{% if match_details %}
-<h3>Últimas partidas</h3>
-<table>
-  <tr>
-    <th>Resultado</th>
-    <th>Campeón</th>
-    <th>KDA</th>
-    <th>Daño</th>
-    <th>Fecha</th>
-  </tr>
-  {% for m in match_details %}
-  <tr>
-    <td>{{ m.result }}</td>
-    <td>{{ m.champion }}</td>
-    <td>{{ m.kda }}</td>
-    <td>{{ m.damage }}</td>
-    <td>{{ m.date }}</td>
-  </tr>
-  {% endfor %}
-</table>
-{% endif %}
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Elo actual</div>
+      <span class="badge soloq">SoloQ</span>
+    </div>
+    {% if elo_data %}
+      <p class="mt-0"><strong>{{ elo_data.tier }} {{ elo_data.rank }}</strong> — {{ elo_data.lp }} LP</p>
+      <p class="text-muted">Victorias: {{ elo_data.wins }} · Derrotas: {{ elo_data.losses }} · Winrate: {{ elo_data.winrate }}</p>
+    {% else %}
+      <p class="text-muted">Sin datos de liga para este invocador.</p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card mt-3">
+  <div class="card-header">
+    <div class="card-title">Últimas partidas</div>
+  </div>
+  {% if match_details %}
+    <div class="table-wrap mt-1">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Resultado</th><th>Campeón</th><th>KDA</th><th>Daño</th><th>Fecha</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for m in match_details %}
+          <tr>
+            <td>{% if m.result == 'Victoria' %}<span class="badge win">Victoria</span>{% else %}<span class="badge loss">Derrota</span>{% endif %}</td>
+            <td>{{ m.champion }}</td>
+            <td>{{ m.kda }}</td>
+            <td>{{ m.damage }}</td>
+            <td>{{ m.date }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p class="text-muted">No hay partidas recientes para mostrar.</p>
+  {% endif %}
+</div>
 
 {% endblock %}

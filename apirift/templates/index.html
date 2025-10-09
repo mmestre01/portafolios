@@ -1,18 +1,48 @@
 {% extends "base.html" %}
-{% block title %}Inicio - API Rift{% endblock %}
+{% block title %}Inicio — API Rift{% endblock %}
 {% block content %}
-<h2>Bienvenido a API Rift</h2>
-<p>Una plataforma para apostar puntos en tus partidas de League of Legends y ver estadísticas en tiempo real.</p>
 
-{% if not session.get('user_id') %}
-    <p><a href="{{ url_for('register') }}">Crea tu cuenta</a> o <a href="{{ url_for('login') }}">inicia sesión</a> para empezar.</p>
-{% else %}
-    <h3>Accesos rápidos:</h3>
-    <ul>
-        <li><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
-        <li><a href="{{ url_for('apuestas') }}">Apuestas</a></li>
-        <li><a href="{{ url_for('ranking') }}">Ranking</a></li>
-        <li><a href="{{ url_for('stats') }}">Stats</a></li>
-    </ul>
-{% endif %}
+<div class="hero">
+  <h1>Bienvenido a API Rift 🎮</h1>
+  <p>Explora estadísticas, ranking de Elo, apuestas en vivo y más, todo integrado con la API de Riot.</p>
+  <div class="mt-2 flex">
+    {% if not session.get('user_id') %}
+      <a class="btn primary" href="{{ url_for('register') }}">Crear cuenta</a>
+      <a class="btn" href="{{ url_for('login') }}">Iniciar sesión</a>
+    {% else %}
+      <a class="btn primary" href="{{ url_for('dashboard') }}">Ir al Dashboard</a>
+      <a class="btn" href="{{ url_for('apuestas') }}">Apuestas</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="grid cols-3 mt-3">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Stats en tiempo real</div>
+      <span class="badge soloq">LOL</span>
+    </div>
+    <p class="text-muted">Consulta tu perfil de invocador, elo y últimas partidas.</p>
+    <a class="btn mt-2" href="{{ url_for('stats') }}">Ver Stats</a>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Ranking</div>
+      <span class="badge">Ladder</span>
+    </div>
+    <p class="text-muted">Clasificación por Elo de los usuarios registrados.</p>
+    <a class="btn mt-2" href="{{ url_for('ranking') }}">Ver Ranking</a>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Apuestas</div>
+      <span class="badge">Live</span>
+    </div>
+    <p class="text-muted">Apuesta puntos durante los primeros 5 minutos de tu partida.</p>
+    <a class="btn mt-2" href="{{ url_for('apuestas') }}">Ir a Apuestas</a>
+  </div>
+</div>
+
 {% endblock %}

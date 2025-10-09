@@ -1,15 +1,25 @@
 {% extends "base.html" %}
-{% block title %}Login - API Rift{% endblock %}
+{% block title %}Login — API Rift{% endblock %}
 {% block content %}
-<h2>Iniciar sesión</h2>
-<form method="POST" action="{{ url_for('login') }}">
-    <label>Email:</label>
-    <input type="email" name="email" required>
 
-    <label>Contraseña:</label>
-    <input type="password" name="password" required>
+<div class="card" style="max-width:520px;margin:0 auto;">
+  <div class="card-header">
+    <div class="card-title">Iniciar sesión</div>
+  </div>
+  <form method="POST" class="form-grid">
+    <div>
+      <label>Email</label>
+      <input class="input" type="email" name="email" required>
+    </div>
+    <div>
+      <label>Contraseña</label>
+      <input class="input" type="password" name="password" required>
+    </div>
+    <div class="flex mt-1">
+      <button class="btn primary right" type="submit">Entrar</button>
+    </div>
+  </form>
+  <p class="text-muted mt-2">¿No tienes cuenta? <a class="link" href="{{ url_for('register') }}">Regístrate</a></p>
+</div>
 
-    <button type="submit">Entrar</button>
-</form>
-<p>¿No tienes cuenta? <a href="{{ url_for('register') }}">Regístrate</a></p>
 {% endblock %}

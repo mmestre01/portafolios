@@ -1,14 +1,32 @@
 {% extends "base.html" %}
-{% block title %}Perfil - API Rift{% endblock %}
+{% block title %}Perfil — API Rift{% endblock %}
 {% block content %}
-<h2>Configurar tu invocador</h2>
-<form method="POST">
-    <label>Nombre de invocador:</label>
-    <input type="text" name="summoner_name" value="{{ user.summoner_name or '' }}" required>
 
-    <label>Tagline (ej: EUW, LAS, NA):</label>
-    <input type="text" name="tagline" value="{{ user.tagline or '' }}" required>
+<div class="card" style="max-width:740px;margin:0 auto;">
+  <div class="card-header">
+    <div class="card-title">Mi perfil</div>
+    <span class="text-muted">Configura tu Riot ID</span>
+  </div>
 
-    <button type="submit">Guardar</button>
-</form>
+  <form method="POST" class="form-grid">
+    <div class="grid cols-2">
+      <div>
+        <label>Nombre de invocador</label>
+        <input class="input" type="text" name="summoner_name" value="{{ user.summoner_name or '' }}" required>
+      </div>
+      <div>
+        <label>Tagline</label>
+        <input class="input" type="text" name="tagline" value="{{ user.tagline or '' }}" placeholder="EUW" required>
+      </div>
+    </div>
+    <div class="flex mt-1">
+      <button class="btn primary right" type="submit">Guardar</button>
+    </div>
+  </form>
+
+  <div class="mt-3">
+    <p class="text-muted">Actual: <strong>{{ user.summoner_name or '—' }}</strong>#<strong>{{ user.tagline or '—' }}</strong></p>
+  </div>
+</div>
+
 {% endblock %}

@@ -1,16 +1,127 @@
 {% extends "base.html" %}
-{% block title %}Apuestas - API Rift{% endblock %}
+{% block title %}Apuestas — API Rift{% endblock %}
 {% block content %}
-<h2>Apuestas</h2>
-<p>Aquí podrás apostar tus puntos en tu partida actual.</p>
-<form method="POST" action="#">
-  <label>Tipo de apuesta:</label>
-  <select name="apuesta_tipo">
-    <option value="ganar">Ganar</option>
-    <option value="perder">Perder</option>
-  </select>
-  <label>Puntos a apostar:</label>
-  <input type="number" name="puntos_apostados" min="1">
-  <button type="submit">Apostar</button>
-</form>
+
+<div class="grid cols-2">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Apuestas en vivo</div>
+      <span class="badge">Live</span>
+    </div>
+
+    <div id="apuesta-form" style="display: {{ 'block' if puede_apostar else 'none' }};">
+      <p class="text-muted mt-0">Estás en partida. Puedes apostar durante los primeros 5 minutos.</p>
+      <form method="POST" action="{{ url_for('realizar_apuesta') }}" class="form-grid">
+        <input type="hidden" name="game_id" value="{{ game_id }}">
+        <div class="grid cols-2">
+          <div>
+            <label>Tipo de apuesta</label>
+            <select name="apuesta_tipo">
+              <option value="ganar">Voy a ganar</option>
+              <option value="perder">Voy a perder</option>
+            </select>
+          </div>
+          <div>
+            <label>Puntos a apostar</label>
+            <input class="input" type="number" name="puntos_apostados" min="1" max="{{ puntos_actuales }}" required>
+          </div>
+        </div>
+        <div class="flex mt-1">
+          <button class="btn primary right" type="submit">Apostar</button>
+        </div>
+      </form>
+    </div>
+
+    {% if not puede_apostar %}
+      <p class="text-muted mt-0">No estás en partida ahora mismo (o ya pasó el tiempo para apostar). Mantendremos esta página chequeando cada 10s.</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Mis puntos</div>
+    </div>
+    <p class="text-muted mt-0">Puntos actuales: <strong>{{ puntos_actuales }}</strong></p>
+  </div>
+</div>
+
+<div class="grid cols-2 mt-3">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Ranking global de puntos</div>
+    </div>
+    <div class="table-wrap mt-1">
+      <table class="table">
+        <thead>
+          <tr><th>Jugador</th><th>Puntos</th></tr>
+        </thead>
+        <tbody>
+          {% for nombre, puntos in ranking_puntos %}
+          <tr>
+            <td>{{ nombre }}</td>
+            <td>{{ puntos }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="2" class="text-muted">No hay datos de ranking.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Historial de mis apuestas</div>
+    </div>
+    <div class="table-wrap mt-1">
+      <table class="table">
+        <thead>
+          <tr><th>Fecha</th><th>Partida</th><th>Tipo</th><th>Puntos</th><th>Resultado</th></tr>
+        </thead>
+        <tbody>
+          {% for ap in historial %}
+          <tr>
+            <td>{{ ap.fecha.strftime('%d/%m/%Y %H:%M') if ap.fecha else '-' }}</td>
+            <td>{{ ap.id_partida }}</td>
+            <td>{{ ap.apuesta_tipo }}</td>
+            <td>{{ ap.puntos_apostados }}</td>
+            <td>
+              {% if ap.resultado == True %}<span class="badge win">Ganó</span>
+              {% elif ap.resultado == False %}<span class="badge loss">Perdió</span>
+              {% else %}<span class="badge">Pendiente</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" class="text-muted">No hay apuestas aún.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  function checkGameStatus() {
+    fetch("{{ url_for('check_game_status') }}")
+      .then(res => res.json())
+      .then(data => {
+        if (data.partida_finalizada === true) {
+          // Solo alert si había apuestas pendientes procesadas
+          alert("La partida ha terminado y se han actualizado tus puntos ✅");
+          location.reload();
+          return;
+        }
+        const form = document.getElementById('apuesta-form');
+        if (data.en_partida && data.puede_apostar) {
+          form.style.display = 'block';
+        } else {
+          form.style.display = 'none';
+        }
+      })
+      .catch(err => console.error("Error status:", err));
+  }
+  setInterval(checkGameStatus, 10000); // cada 10s
+</script>
+
 {% endblock %}

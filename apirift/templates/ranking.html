@@ -1,29 +1,46 @@
 {% extends "base.html" %}
-{% block title %}Ranking - API Rift{% endblock %}
+{% block title %}Ranking — API Rift{% endblock %}
 {% block content %}
-<h2>Ranking de Elo</h2>
-<table>
-  <tr>
-    <th>Usuario</th>
-    <th>Invocador</th>
-    <th>Tagline</th>
-    <th>Tier</th>
-    <th>Rank</th>
-    <th>LP</th>
-    <th>Victorias</th>
-    <th>Derrotas</th>
-  </tr>
-  {% for r in user_ranks %}
-  <tr>
-    <td>{{ r.username }}</td>
-    <td>{{ r.summoner_name }}</td>
-    <td>{{ r.tagline }}</td>
-    <td>{{ r.tier }}</td>
-    <td>{{ r.rank }}</td>
-    <td>{{ r.lp }}</td>
-    <td>{{ r.wins }}</td>
-    <td>{{ r.losses }}</td>
-  </tr>
-  {% endfor %}
-</table>
+
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">Ranking de Elo</div>
+  </div>
+
+  <div class="table-wrap mt-1">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Usuario</th>
+          <th>Invocador</th>
+          <th>Tag</th>
+          <th>Tier</th>
+          <th>División</th>
+          <th>LP</th>
+          <th>W</th>
+          <th>L</th>
+          <th>WR</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in user_ranks %}
+        <tr>
+          <td>{{ r.username }}</td>
+          <td>{{ r.summoner_name }}</td>
+          <td>{{ r.tagline }}</td>
+          <td>{{ r.tier }}</td>
+          <td>{{ r.rank }}</td>
+          <td>{{ r.lp }}</td>
+          <td>{{ r.wins }}</td>
+          <td>{{ r.losses }}</td>
+          <td>{{ r.winrate }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="9" class="text-muted">No hay datos de ranking.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
 {% endblock %}

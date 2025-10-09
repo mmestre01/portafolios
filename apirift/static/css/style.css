@@ -1,0 +1,237 @@
+/* ===== API Rift - Global Styles ===== */
+
+/* --------- CSS Variables (Theme) --------- */
+:root{
+  --bg: #0b0f1a;            /* fondo principal */
+  --bg-2:#0e1422;           /* fondo secundario */
+  --surface:#111827;        /* cards/nav */
+  --surface-2:#0f172a;      /* cards más oscuras */
+  --text:#e5e7eb;           /* texto principal */
+  --muted:#9ca3af;          /* texto secundario */
+  --border:#233046;         /* bordes */
+  --accent:#7c3aed;         /* morado */
+  --accent-2:#06b6d4;       /* cian */
+  --success:#22c55e;
+  --warning:#f59e0b;
+  --danger:#ef4444;
+  --shadow: 0 10px 30px rgba(0,0,0,0.25);
+}
+
+/* --------- Reset suave --------- */
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+  color:var(--text);
+  background:
+    radial-gradient(1200px 800px at 110% -10%, rgba(124,58,237,0.15), transparent 40%),
+    radial-gradient(1000px 700px at -10% 110%, rgba(6,182,212,0.15), transparent 40%),
+    var(--bg);
+}
+
+/* --------- Layout --------- */
+.container{
+  width:100%;
+  max-width:1200px;
+  margin:0 auto;
+  padding: 24px;
+}
+
+.section{
+  margin-top: 24px;
+}
+
+/* --------- Navbar --------- */
+.navbar{
+  position:sticky;
+  top:0;
+  z-index:100;
+  background: color-mix(in oklab, var(--surface) 88%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom:1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+.navbar .row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  padding: 12px 24px;
+}
+.brand{
+  display:flex; align-items:center; gap:10px;
+  text-decoration:none; color:var(--text);
+  font-weight:700; letter-spacing:0.3px;
+}
+.brand .logo{
+  width:36px; height:36px; display:grid; place-items:center;
+  border-radius:12px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  box-shadow: 0 8px 20px rgba(124,58,237,0.35);
+  font-size:18px;
+}
+.nav{
+  display:flex; gap:8px; flex-wrap:wrap;
+}
+.nav a{
+  color:var(--muted);
+  text-decoration:none;
+  padding:10px 12px;
+  border-radius:10px;
+  font-weight:600;
+  transition: all .15s ease;
+  border:1px solid transparent;
+}
+.nav a:hover{
+  color:var(--text);
+  background: var(--bg-2);
+  border-color: var(--border);
+}
+.nav a.active{
+  color:#fff;
+  background: linear-gradient(135deg, rgba(124,58,237,.25), rgba(6,182,212,.25));
+  border-color: color-mix(in oklab, var(--accent) 40%, var(--border));
+}
+
+/* --------- Footer --------- */
+.footer{
+  margin-top:40px;
+  border-top:1px solid var(--border);
+  padding: 24px;
+  color:var(--muted);
+}
+
+/* --------- Cards --------- */
+.card{
+  background: linear-gradient(180deg, color-mix(in oklab, var(--surface) 90%, transparent), var(--surface-2));
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:20px;
+  box-shadow: var(--shadow);
+}
+.card + .card{ margin-top:16px; }
+
+.card-header{
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  margin-bottom:10px;
+}
+.card-title{ font-size:18px; font-weight:700; }
+.card-subtitle{ color:var(--muted); font-size:14px; }
+
+/* --------- Buttons --------- */
+.btn{
+  display:inline-flex; align-items:center; gap:8px;
+  height:40px; padding:0 14px;
+  border-radius:10px; border:1px solid var(--border);
+  color:var(--text); background: var(--bg-2);
+  font-weight:600; text-decoration:none; cursor:pointer;
+  transition: all .15s ease;
+}
+.btn:hover{ transform: translateY(-1px); box-shadow: var(--shadow); }
+.btn:active{ transform: translateY(0); }
+.btn.primary{
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border-color: transparent;
+}
+.btn.success{ background: color-mix(in oklab, var(--success) 25%, var(--bg-2)); border-color: color-mix(in oklab, var(--success) 45%, var(--border)); }
+.btn.warning{ background: color-mix(in oklab, var(--warning) 25%, var(--bg-2)); border-color: color-mix(in oklab, var(--warning) 45%, var(--border)); }
+.btn.danger{ background: color-mix(in oklab, var(--danger) 25%, var(--bg-2)); border-color: color-mix(in oklab, var(--danger) 45%, var(--border)); }
+
+/* --------- Forms --------- */
+.form-grid{
+  display:grid; gap:14px;
+}
+label{
+  display:block; font-weight:600; margin-bottom:6px; color:var(--muted);
+}
+.input, select, textarea{
+  width:100%;
+  height:42px;
+  padding:0 12px;
+  border-radius:10px;
+  border:1px solid var(--border);
+  background: var(--bg-2);
+  color:var(--text);
+  outline:none;
+  transition:border .15s ease, box-shadow .15s ease;
+}
+textarea{ height:auto; padding:12px; min-height:100px; resize:vertical; }
+.input:focus, select:focus, textarea:focus{
+  border-color: color-mix(in oklab, var(--accent) 55%, var(--border));
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--accent) 14%, transparent);
+}
+
+/* --------- Tables --------- */
+.table-wrap{ overflow:auto; border:1px solid var(--border); border-radius:12px; }
+.table{
+  width:100%; border-collapse:collapse; min-width:680px;
+}
+.table thead th{
+  position:sticky; top:0;
+  background: color-mix(in oklab, var(--surface) 92%, transparent);
+  text-align:left; padding:12px; font-size:13px; letter-spacing:0.4px;
+  border-bottom:1px solid var(--border);
+}
+.table tbody td{
+  padding:12px; border-bottom:1px solid var(--border);
+}
+.table tbody tr:hover{ background: color-mix(in oklab, var(--surface) 75%, transparent); }
+
+/* --------- Badges --------- */
+.badge{
+  display:inline-block; padding:4px 10px; border-radius:999px;
+  font-size:12px; font-weight:700; letter-spacing:.3px;
+  border:1px solid var(--border);
+  color:var(--muted);
+}
+.badge.win{ background: color-mix(in oklab, var(--success) 18%, var(--bg-2)); color:#d1fae5; border-color: color-mix(in oklab, var(--success) 50%, var(--border)); }
+.badge.loss{ background: color-mix(in oklab, var(--danger) 18%, var(--bg-2)); color:#ffe4e6; border-color: color-mix(in oklab, var(--danger) 50%, var(--border)); }
+.badge.soloq{ background: color-mix(in oklab, var(--accent) 25%, var(--bg-2)); color:#ede9fe; }
+
+/* --------- Alerts (flash) --------- */
+.flash-messages{ margin:16px 0; display:grid; gap:10px; }
+.flash{
+  padding:12px 14px; border-radius:10px; border:1px solid var(--border);
+  background: var(--bg-2); color:var(--text); font-weight:600;
+}
+.flash.success{ border-color: color-mix(in oklab, var(--success) 55%, var(--border)); background: color-mix(in oklab, var(--success) 18%, var(--bg-2)); }
+.flash.error{ border-color: color-mix(in oklab, var(--danger) 55%, var(--border)); background: color-mix(in oklab, var(--danger) 18%, var(--bg-2)); }
+.flash.warning{ border-color: color-mix(in oklab, var(--warning) 55%, var(--border)); background: color-mix(in oklab, var(--warning) 18%, var(--bg-2)); }
+.flash.info{ border-color: color-mix(in oklab, var(--accent-2) 55%, var(--border)); background: color-mix(in oklab, var(--accent-2) 18%, var(--bg-2)); }
+
+/* --------- Utilities --------- */
+.grid{ display:grid; gap:16px; }
+.grid.cols-2{ grid-template-columns: 1fr 1fr; }
+.grid.cols-3{ grid-template-columns: repeat(3, 1fr); }
+.grid.cols-4{ grid-template-columns: repeat(4, 1fr); }
+@media (max-width: 980px){
+  .grid.cols-2, .grid.cols-3, .grid.cols-4{ grid-template-columns: 1fr; }
+}
+
+.text-muted{ color:var(--muted); }
+.center{ text-align:center; }
+.mt-0{ margin-top:0 }
+.mt-1{ margin-top:8px }
+.mt-2{ margin-top:16px }
+.mt-3{ margin-top:24px }
+.mt-4{ margin-top:32px }
+.flex{ display:flex; gap:12px; align-items:center; }
+.right{ margin-left:auto; }
+
+/* --------- Hero (home/dashboard) --------- */
+.hero{
+  border:1px solid var(--border);
+  border-radius:18px;
+  padding:24px;
+  background:
+    linear-gradient(135deg, rgba(124,58,237,0.18), rgba(6,182,212,0.18)),
+    var(--surface-2);
+  box-shadow: var(--shadow);
+}
+.hero h1{ margin: 0 0 8px; font-size:28px; }
+.hero p{ color:var(--muted); }
+
+/* --------- Links --------- */
+a.link{ color: var(--accent-2); text-decoration: none; }
+a.link:hover{ text-decoration: underline; }

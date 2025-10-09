@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 import os
@@ -19,6 +19,7 @@ bcrypt = Bcrypt(app)
 # ----------------------------
 class User(db.Model):
     __tablename__ = "users"
+    
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(150), unique=True, nullable=False)
     email = db.Column(db.String(150), unique=True, nullable=False)
@@ -28,22 +29,59 @@ class User(db.Model):
     summoner_name = db.Column(db.String(150), nullable=True)
     tagline = db.Column(db.String(10), nullable=True)
 
+    # Relaciones
+    puntos = db.relationship("Puntos", back_populates="user", uselist=False)
+    apuestas = db.relationship("Apuesta", back_populates="user", lazy="dynamic")
+
+    def __repr__(self):
+        return f"<User {self.username} ({self.email})>"
+
+
 class Puntos(db.Model):
     __tablename__ = "puntos"
+    
     id_usuario = db.Column(db.Integer, db.ForeignKey("users.id"), primary_key=True)
     puntos = db.Column(db.Integer, default=100)
-    user = db.relationship("User", backref="puntos", uselist=False)
+
+    user = db.relationship("User", back_populates="puntos")
+
+    def __repr__(self):
+        return f"<Puntos user_id={self.id_usuario} puntos={self.puntos}>"
+
 
 class Apuesta(db.Model):
     __tablename__ = "apuestas"
-    id = db.Column(db.Integer, primary_key=True)
-    id_usuario = db.Column(db.Integer, db.ForeignKey("users.id"))
+    
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    id_usuario = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     id_partida = db.Column(db.String, nullable=False)
-    apuesta_tipo = db.Column(db.String, nullable=False)  # "ganar" o "perder"
+
+    apuesta_tipo = db.Column(db.String(20), nullable=False)  # "ganar" o "perder"
     puntos_apostados = db.Column(db.Integer, nullable=False)
+
+    fecha = db.Column(db.DateTime, default=datetime.utcnow)
     resultado = db.Column(db.Boolean, default=None)  # True=acierta, False=falla
     procesada = db.Column(db.Boolean, default=False)
-    user = db.relationship("User", backref="apuestas")
+
+    user = db.relationship("User", back_populates="apuestas")
+
+    def __repr__(self):
+        return (f"<Apuesta id={self.id} user_id={self.id_usuario} "
+                f"tipo={self.apuesta_tipo} puntos={self.puntos_apostados} "
+                f"resultado={self.resultado} procesada={self.procesada}>")
+
+class HistorialPuntos(db.Model):
+    __tablename__ = "historial_puntos"
+    
+    id = db.Column(db.Integer, primary_key=True)
+    id_usuario = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    puntos = db.Column(db.Integer, nullable=False)
+    fecha = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship("User", backref="historial_puntos")
+
+    def __repr__(self):
+        return f"<Historial user={self.id_usuario} puntos={self.puntos} fecha={self.fecha}>"
 
 # ----------------------------
 # Rutas principales
@@ -51,6 +89,338 @@ class Apuesta(db.Model):
 @app.route('/')
 def index():
     return render_template('index.html')
+from datetime import datetime
+import requests
+from urllib.parse import quote
+
+def get_ids_from_riot_id(game_name: str, tag_line: str, api_key: str):
+    """Devuelve (puuid, summoner_id) usando account-v1 + summoner-v4(by-puuid). Incluye prints de depuración."""
+    headers = {"X-Riot-Token": api_key}
+    region_routing = "europe"
+    region_platform = "euw1"
+
+    # 1) Riot ID -> PUUID (account-v1)
+    url_account = f"https://{region_routing}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{quote(game_name)}/{quote(tag_line)}"
+    r_acc = requests.get(url_account, headers=headers)
+    print(f"📡 account-v1 URL: {url_account}")
+    print(f"   ↳ status: {r_acc.status_code}, resp: {r_acc.text}")
+    if r_acc.status_code != 200:
+        return None, None
+    puuid = r_acc.json().get("puuid")
+
+    # 2) PUUID -> Summoner (summoner-v4 by-puuid)  => necesitamos el 'id' (encryptedSummonerId)
+    url_sum_by_puuid = f"https://{region_platform}.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/{puuid}"
+    r_sum = requests.get(url_sum_by_puuid, headers=headers)
+    print(f"📡 summoner-v4(by-puuid) URL: {url_sum_by_puuid}")
+    print(f"   ↳ status: {r_sum.status_code}, resp: {r_sum.text}")
+    if r_sum.status_code != 200:
+        return puuid, None
+
+    sum_payload = r_sum.json()
+    summoner_id = sum_payload.get("id")  # <- ESTE es el que requiere spectator
+
+    # Nota: con algunas keys de desarrollo, Riot puede devolver un payload "recortado"
+    # sin 'id' ni 'name'. Si viene None, no podremos consultar spectator.
+    if not summoner_id:
+        print("⚠️ summoner-v4(by-puuid) ha devuelto un payload sin 'id'. "
+              "Con algunas dev keys Riot oculta campos personales en EU. "
+              "Soluciones: intentar otra key, o integrar RSO y usar /summoner/v4/summoners/me.")
+    return puuid, summoner_id
+
+def procesar_apuesta(apuesta, headers):
+    """Verifica el resultado de la partida y actualiza puntos."""
+    url_match = f"https://europe.api.riotgames.com/lol/match/v5/matches/{apuesta.id_partida}"
+    r_match = requests.get(url_match, headers=headers)
+
+    if r_match.status_code != 200:
+        return
+
+    match_data = r_match.json()
+    if "info" not in match_data:
+        return
+
+    # Buscar al usuario
+    puuid = apuesta.user.puntos.user.summoner_name
+    participant = next((p for p in match_data["info"]["participants"] if p["puuid"] == puuid), None)
+    if not participant:
+        return
+
+    win = participant.get("win", False)
+
+    if (win and apuesta.apuesta_tipo == "ganar") or (not win and apuesta.apuesta_tipo == "perder"):
+        apuesta.resultado = True
+        apuesta.user.puntos.puntos += apuesta.puntos_apostados  # Ganó → duplica
+    else:
+        apuesta.resultado = False
+        apuesta.user.puntos.puntos -= apuesta.puntos_apostados  # Perdió → resta
+
+    apuesta.procesada = True
+    db.session.commit()
+
+
+
+@app.route('/apuestas')
+def apuestas():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    user = User.query.get(session['user_id'])
+    if not user.summoner_name or not user.tagline:
+        flash("Configura tu Riot ID en Ajustes antes de apostar.", "error")
+        return redirect(url_for('perfil'))
+
+    headers = {"X-Riot-Token": app.config['RIOT_API_KEY']}
+    region_routing = "europe"
+    region_platform = "euw1"
+
+    # Ranking de puntos global
+    ranking_puntos = (
+        db.session.query(User.username, Puntos.puntos)
+        .join(Puntos, User.id == Puntos.id_usuario)
+        .order_by(Puntos.puntos.desc())
+        .all()
+    )
+
+    # Historial de puntos del usuario
+    historial = (
+        Apuesta.query.filter_by(id_usuario=user.id)
+        .order_by(Apuesta.fecha.asc())
+        .all()
+    )
+    puntos_actuales = user.puntos.puntos if user.puntos else 0
+
+    # 1) Riot ID -> PUUID
+    url_account = f"https://{region_routing}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{quote(user.summoner_name)}/{quote(user.tagline)}"
+    r_acc = requests.get(url_account, headers=headers)
+    if r_acc.status_code != 200:
+        # No bloqueamos, solo mostramos ranking
+        return render_template("apuestas.html",
+                               user=user,
+                               puede_apostar=False,
+                               ranking_puntos=ranking_puntos,
+                               historial=historial,
+                               puntos_actuales=puntos_actuales)
+
+    puuid = r_acc.json().get("puuid")
+
+    # 2) Spectator con PUUID
+    url_active = f"https://{region_platform}.api.riotgames.com/lol/spectator/v5/active-games/by-summoner/{puuid}"
+    r_active = requests.get(url_active, headers=headers)
+
+    if r_active.status_code != 200:
+        # No está en partida → mostrar ranking
+        return render_template("apuestas.html",
+                               user=user,
+                               puede_apostar=False,
+                               ranking_puntos=ranking_puntos,
+                               historial=historial,
+                               puntos_actuales=puntos_actuales)
+
+    game_info = r_active.json()
+    game_start_ms = game_info.get("gameStartTime")
+    game_id = str(game_info.get("gameId"))
+
+    # 3) comprobar tiempo de partida
+    inicio = datetime.fromtimestamp(game_start_ms / 1000.0)
+    minutos = (datetime.utcnow() - inicio).total_seconds() / 60.0
+    puede_apostar = minutos <= 5
+
+    return render_template("apuestas.html",
+                           user=user,
+                           puede_apostar=puede_apostar,
+                           game_id=game_id,
+                           ranking_puntos=ranking_puntos,
+                           historial=historial,
+                           puntos_actuales=puntos_actuales)
+
+
+from urllib.parse import quote
+
+def get_puuid_from_user(user, api_key):
+    headers = {"X-Riot-Token": api_key}
+    region_routing = "europe"
+    url_account = f"https://{region_routing}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{quote(user.summoner_name)}/{quote(user.tagline)}"
+    r = requests.get(url_account, headers=headers)
+    print(f"[get_puuid] {url_account} -> {r.status_code}")
+    if r.status_code != 200:
+        print(f"[get_puuid] resp: {r.text}")
+        return None
+    return r.json().get("puuid")
+
+def procesar_apuesta(apuesta, api_key):
+    """
+    Verifica el resultado de la partida donde se apostó y liquida la apuesta.
+    - apuesta.id_partida = gameId NUMÉRICO de spectator
+    - buscamos en match-v5 (por puuid) el match cuyo info.gameId == int(id_partida)
+    - si ganó y apostó 'ganar' (o perdió y apostó 'perder') => sumamos 2x lo apostado (ya se restó al apostar)
+    - si perdió => no hacemos nada más (el stake ya fue descontado)
+    """
+    if apuesta.procesada:
+        return False  # ya hecha
+
+    headers = {"X-Riot-Token": api_key}
+    region_routing = "europe"
+
+    user = apuesta.user
+    puuid = get_puuid_from_user(user, api_key)
+    if not puuid:
+        print("[procesar_apuesta] No PUUID para user", user.username)
+        return False
+
+    # 1) ids recientes
+    url_ids = f"https://{region_routing}.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?start=0&count=10"
+    r_ids = requests.get(url_ids, headers=headers)
+    print(f"[procesar_apuesta] {url_ids} -> {r_ids.status_code}")
+    if r_ids.status_code != 200:
+        print("[procesar_apuesta] resp:", r_ids.text)
+        return False
+
+    match_ids = r_ids.json() or []
+    try:
+        target_game_id = int(apuesta.id_partida)
+    except (TypeError, ValueError):
+        print("[procesar_apuesta] id_partida inválido:", apuesta.id_partida)
+        return False
+
+    found = None
+    for mid in match_ids:
+        url_match = f"https://{region_routing}.api.riotgames.com/lol/match/v5/matches/{mid}"
+        r_match = requests.get(url_match, headers=headers)
+        print(f"[procesar_apuesta] {url_match} -> {r_match.status_code}")
+        if r_match.status_code != 200:
+            continue
+        data = r_match.json()
+        info = data.get("info", {})
+        if info.get("gameId") == target_game_id:
+            found = info
+            break
+
+    if not found:
+        print("[procesar_apuesta] No encontrado match con info.gameId =", target_game_id)
+        return False
+
+    # 2) localizar participante por PUUID y ver si ganó
+    participant = next((p for p in found.get("participants", []) if p.get("puuid") == puuid), None)
+    if not participant:
+        print("[procesar_apuesta] No participant con ese puuid")
+        return False
+
+    gano = bool(participant.get("win", False))
+
+    # 3) liquidación
+    if (gano and apuesta.apuesta_tipo == "ganar") or ((not gano) and apuesta.apuesta_tipo == "perder"):
+        # al apostar restamos 'puntos_apostados'; si gana, añadimos 2x => neto +1x
+        apuesta.resultado = True
+        if apuesta.user.puntos is None:
+            # por si acaso
+            apuesta.user.puntos = Puntos(id_usuario=apuesta.user.id, puntos=0)
+        apuesta.user.puntos.puntos += (apuesta.puntos_apostados * 2)
+    else:
+        # perdió: no tocamos nada (el stake ya se restó al apostar)
+        apuesta.resultado = False
+
+    apuesta.procesada = True
+    db.session.commit()
+    return True
+
+@app.route("/realizar_apuesta", methods=["POST"])
+def realizar_apuesta():
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    user = User.query.get(session["user_id"])
+    apuesta_tipo = request.form.get("apuesta_tipo")
+    game_id = request.form.get("game_id")
+    puntos_raw = request.form.get("puntos_apostados")
+
+    if not game_id or not puntos_raw or not apuesta_tipo:
+        flash("Datos de apuesta incompletos", "error")
+        return redirect(url_for("apuestas"))
+
+    puntos = int(puntos_raw)
+
+    if not user.puntos or user.puntos.puntos < puntos:
+        flash("No tienes suficientes puntos", "error")
+        return redirect(url_for("apuestas"))
+
+    # crear apuesta y descontar stake
+    ap = Apuesta(
+        id_usuario=user.id,
+        id_partida=str(game_id),  # guardamos el gameId numérico de spectator
+        apuesta_tipo=apuesta_tipo,
+        puntos_apostados=puntos,
+        procesada=False,
+        resultado=None
+    )
+    user.puntos.puntos -= puntos
+
+    db.session.add(ap)
+    db.session.commit()
+
+    flash("Apuesta registrada ✅", "success")
+    return redirect(url_for("apuestas"))
+
+
+
+from flask import jsonify
+
+@app.route("/check_game_status")
+def check_game_status():
+    if "user_id" not in session:
+        return jsonify({"error": "No logueado"})
+
+    user = User.query.get(session["user_id"])
+    headers = {"X-Riot-Token": app.config["RIOT_API_KEY"]}
+    region_routing = "europe"
+    region_platform = "euw1"
+
+    # 1) PUUID
+    url_account = f"https://{region_routing}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{quote(user.summoner_name)}/{quote(user.tagline)}"
+    r_acc = requests.get(url_account, headers=headers)
+    if r_acc.status_code != 200:
+        return jsonify({"en_partida": False, "partida_finalizada": False})
+
+    puuid = r_acc.json().get("puuid")
+
+    # 2) Spectator
+    url_active = f"https://{region_platform}.api.riotgames.com/lol/spectator/v5/active-games/by-summoner/{puuid}"
+    r_active = requests.get(url_active, headers=headers)
+
+    if r_active.status_code == 200:
+        game_info = r_active.json()
+        game_start_ms = game_info.get("gameStartTime")
+        game_id = str(game_info.get("gameId"))
+        inicio = datetime.fromtimestamp(game_start_ms / 1000.0)
+        minutos = (datetime.utcnow() - inicio).total_seconds() / 60.0
+        puede_apostar = minutos <= 5
+
+        return jsonify({
+            "en_partida": True,
+            "puede_apostar": puede_apostar,
+            "game_id": game_id,
+            "partida_finalizada": False
+        })
+
+    # 3) No está en partida -> ¿hay apuestas pendientes que liquidar?
+    apuestas_pendientes = Apuesta.query.filter_by(id_usuario=user.id, procesada=False).all()
+    if not apuestas_pendientes:
+        return jsonify({"en_partida": False, "partida_finalizada": False})
+
+    algo_procesado = False
+    for ap in apuestas_pendientes:
+        try:
+            ok = procesar_apuesta(ap, app.config["RIOT_API_KEY"])
+            if ok:
+                algo_procesado = True
+        except Exception as e:
+            print("[check_game_status] error procesando apuesta", ap.id, e)
+
+    # Solo avisamos de finalización si había apuestas y conseguimos procesar algo
+    return jsonify({
+        "en_partida": False,
+        "partida_finalizada": algo_procesado
+    })
+
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -67,6 +437,12 @@ def register():
 
         user = User(username=username, email=email, password=password)
         db.session.add(user)
+        db.session.commit()
+        
+
+        # 🔹 Crear fila de puntos inicial
+        user_points = Puntos(id_usuario=user.id, puntos=100)
+        db.session.add(user_points)
         db.session.commit()
 
         flash("Registro exitoso, ahora puedes iniciar sesión.", "success")
@@ -97,24 +473,23 @@ def logout():
     flash("Has cerrado sesión.", "info")
     return redirect(url_for('login'))
 
-@app.route('/dashboard')
+@app.route("/dashboard")
 def dashboard():
-    if 'user_id' not in session:
-        flash("Debes iniciar sesión para acceder al dashboard.", "error")
-        return redirect(url_for('login'))
+    if "user_id" not in session:
+        return redirect(url_for("login"))
 
-    user = User.query.get(session['user_id'])
-    return render_template('dashboard.html', user=user)
+    user = User.query.get(session["user_id"])
+    ultima_apuesta = None
+    if user.apuestas:
+        ultima_apuesta = Apuesta.query.filter_by(id_usuario=user.id).order_by(Apuesta.id.desc()).first()
+
+    return render_template("dashboard.html", user=user, ultima_apuesta=ultima_apuesta)
 
 
 
 
-@app.route('/apuestas')
-def apuestas():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    # Aquí irá la lógica de apuestas
-    return render_template('apuestas.html')
+
+
 
 @app.route('/perfil', methods=['GET', 'POST'])
 def perfil():
@@ -279,7 +654,7 @@ def stats():
 
     if not user.summoner_name or not user.tagline:
         flash("Este usuario no tiene Riot ID configurado", "error")
-        return redirect(url_for("settings"))  # por si quieres mandar a settings
+        return redirect(url_for("perfil"))  # por si quieres mandar a settings
 
     summoner_name = user.summoner_name
     tagline = user.tagline
@@ -507,6 +882,14 @@ def get_ranked_info(puuid):
         "losses": ranked.get("losses", 0)
     }
 
+from flask import Flask
+from werkzeug.middleware.proxy_fix import ProxyFix
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_prefix=1)
+app.config.update(
+    APPLICATION_ROOT="/apirift",
+    SESSION_COOKIE_PATH="/apirift",   # asegura que la cookie se limite a /apirift
+    # PREFERRED_URL_SCHEME="https",   # opcional (ponlo cuando tengas HTTPS)
+)
 
 # ----------------------------
 # Ejecutar la app    source venv/bin/activate

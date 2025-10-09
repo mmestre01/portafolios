@@ -1,13 +1,45 @@
 {% extends "base.html" %}
-{% block title %}Dashboard - API Rift{% endblock %}
-{% block content %}
-<h2>Hola, {{ user.username }} 👋</h2>
-<p>Bienvenido a tu panel de control.</p>
 
-<h3>Opciones disponibles:</h3>
-<ul>
-    <li><a href="{{ url_for('apuestas') }}">Apuestas</a> → Apuesta puntos en tus partidas en curso.</li>
-    <li><a href="{{ url_for('ranking') }}">Ranking</a> → Consulta el ranking de Elo de todos los usuarios.</li>
-    <li><a href="{{ url_for('stats') }}">Stats</a> → Mira tus estadísticas recientes en LoL.</li>
-</ul>
+{% block title %}Dashboard - API Rift{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <h2>Bienvenido, {{ user.username }} 👋</h2>
+
+    <!-- Tarjeta de puntos -->
+    <div class="card">
+        <h3>💰 Puntos actuales</h3>
+        <p class="big-number">{{ user.puntos.puntos if user.puntos else 0 }}</p>
+    </div>
+
+    <!-- Tarjeta última apuesta -->
+    <div class="card">
+        <h3>🎲 Última apuesta</h3>
+        {% if ultima_apuesta %}
+            <p><strong>Partida:</strong> {{ ultima_apuesta.id_partida }}</p>
+            <p><strong>Puntos apostados:</strong> {{ ultima_apuesta.puntos_apostados }}</p>
+            <p>
+                <strong>Resultado:</strong>
+                {% if ultima_apuesta.resultado is none %}
+                    ⏳ Pendiente
+                {% elif ultima_apuesta.resultado %}
+                    ✅ Ganada
+                {% else %}
+                    ❌ Perdida
+                {% endif %}
+            </p>
+            <p><strong>Fecha:</strong> {{ ultima_apuesta.fecha.strftime('%d/%m/%Y %H:%M') }}</p>
+        {% else %}
+            <p class="text-muted">Todavía no has hecho ninguna apuesta.</p>
+        {% endif %}
+    </div>
+
+    <!-- Accesos rápidos -->
+    <div class="quick-links">
+        <a class="btn" href="{{ url_for('apuestas') }}">Ir a Apuestas</a>
+        <a class="btn" href="{{ url_for('ranking') }}">Ver Ranking</a>
+        <a class="btn" href="{{ url_for('stats') }}">Mis Estadísticas</a>
+        <a class="btn" href="{{ url_for('perfil') }}">Editar Perfil</a>
+    </div>
+</div>
 {% endblock %}
