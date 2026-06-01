@@ -103,7 +103,7 @@ const Home = () => {
 
       {/* Pie de página simple */}
       <footer style={{ marginTop: 60, color: '#57606a' }}>
-        <p>© 2025 GitWeb, creado por ti.</p>
+        <p>© 2025 GitWeb, Marc.</p>
       </footer>
     </div>
   );

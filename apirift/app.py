@@ -86,7 +86,7 @@ class HistorialPuntos(db.Model):
 # ----------------------------
 # Rutas principales
 # ----------------------------
-@app.route('/')
+@app.route('/apirift/')
 def index():
     return render_template('index.html')
 from datetime import datetime
@@ -159,7 +159,7 @@ def procesar_apuesta(apuesta, headers):
 
 
 
-@app.route('/apuestas')
+@app.route('/apirift/apuestas')
 def apuestas():
     if 'user_id' not in session:
         return redirect(url_for('login'))
@@ -323,7 +323,7 @@ def procesar_apuesta(apuesta, api_key):
     db.session.commit()
     return True
 
-@app.route("/realizar_apuesta", methods=["POST"])
+@app.route("/apirift/realizar_apuesta", methods=["POST"])
 def realizar_apuesta():
     if "user_id" not in session:
         return redirect(url_for("login"))
@@ -364,7 +364,7 @@ def realizar_apuesta():
 
 from flask import jsonify
 
-@app.route("/check_game_status")
+@app.route("/apirift/check_game_status")
 def check_game_status():
     if "user_id" not in session:
         return jsonify({"error": "No logueado"})
@@ -422,7 +422,7 @@ def check_game_status():
     })
 
 
-@app.route('/register', methods=['GET', 'POST'])
+@app.route('/apirift/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
         username = request.form['username']
@@ -450,7 +450,7 @@ def register():
 
     return render_template('register.html')
 
-@app.route('/login', methods=['GET', 'POST'])
+@app.route('/apirift/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         email = request.form['email']
@@ -467,13 +467,13 @@ def login():
 
     return render_template('login.html')
 
-@app.route('/logout')
+@app.route('/apirift/logout')
 def logout():
     session.pop('user_id', None)
     flash("Has cerrado sesión.", "info")
     return redirect(url_for('login'))
 
-@app.route("/dashboard")
+@app.route("/apirift/dashboard")
 def dashboard():
     if "user_id" not in session:
         return redirect(url_for("login"))
@@ -491,7 +491,7 @@ def dashboard():
 
 
 
-@app.route('/perfil', methods=['GET', 'POST'])
+@app.route('/apirift/perfil', methods=['GET', 'POST'])
 def perfil():
     if 'user_id' not in session:
         return redirect(url_for('login'))
@@ -562,7 +562,7 @@ def get_summoner_info(puuid):
             print("❌ Error en get_summoner_info (raw):", r.text)
         return None
 
-@app.route('/search', methods=['GET', 'POST'])
+@app.route('/apirift/search', methods=['GET', 'POST'])
 def search():
     headers = {"X-Riot-Token": app.config['RIOT_API_KEY']}
     region_routing = "europe"
@@ -644,7 +644,7 @@ def search():
                            match_details=match_details)
 
 
-@app.route('/stats')
+@app.route('/apirift/stats')
 def stats():
     if 'user_id' not in session:
         return redirect(url_for('login'))
@@ -746,7 +746,7 @@ def stats():
 
 
 
-@app.route('/ranking')
+@app.route('/apirift/ranking')
 def ranking():
     if 'user_id' not in session:
         return redirect(url_for('login'))
@@ -882,14 +882,6 @@ def get_ranked_info(puuid):
         "losses": ranked.get("losses", 0)
     }
 
-from flask import Flask
-from werkzeug.middleware.proxy_fix import ProxyFix
-app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_prefix=1)
-app.config.update(
-    APPLICATION_ROOT="/apirift",
-    SESSION_COOKIE_PATH="/apirift",   # asegura que la cookie se limite a /apirift
-    # PREFERRED_URL_SCHEME="https",   # opcional (ponlo cuando tengas HTTPS)
-)
 
 # ----------------------------
 # Ejecutar la app    source venv/bin/activate

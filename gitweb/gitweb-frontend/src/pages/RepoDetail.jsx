@@ -405,7 +405,7 @@ const RepoDetail = () => {
       {/* 🔙 Volver */}
       <button
         style={{ ...styles.buttonSecondary, marginBottom: 15 }}
-        onClick={() => navigate("/repos")}
+        onClick={() => navigate("/dashboard")}
       >
         ⬅️ Volver al listado
       </button>

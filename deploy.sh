@@ -4,7 +4,7 @@ set -e
 # -----------------------------
 # RUTAS PRINCIPALES
 # -----------------------------
-BASE_DIR="/home/mmestre01/Desktop/portafolis"           # Carpeta padre
+BASE_DIR="/home/mmestre01/Desktop/portafolios"           # Carpeta padre
 GITWEB_DIR="$BASE_DIR/gitweb"                           # Carpeta GitWeb
 FRONTEND_DIR="$GITWEB_DIR/gitweb-frontend"              # React frontend
 BACKEND_DIR="$GITWEB_DIR"                               # Flask backend

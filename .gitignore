@@ -52,9 +52,17 @@ yarn-error.log*
 .idea/
 *.iml
 
+# Python caches and virtual environments
+**/__pycache__/
+**/venv/
+
 # Flask
 instance/
 *.env
+
+# Local databases
+*.db
+*.sqlite*
 
 # Others
 coverage/
