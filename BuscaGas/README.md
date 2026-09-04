@@ -1,6 +1,6 @@
 # BuscaGas
 
-MVP web para encontrar las gasolineras más baratas durante una ruta por España o cerca de la ubicación actual, limitando la búsqueda por distancia o tiempo en coche. Cada resultado abre indicaciones directas en Google Maps. Usa precios públicos de MITECO, rutas reales de openrouteservice (HeiGIT), un prefiltro geoespacial métrico y Matrix para medir recorridos reales por carretera.
+MVP web para encontrar las gasolineras más baratas durante una ruta por España, cerca de la ubicación actual o alrededor de una dirección concreta, limitando la búsqueda por distancia o tiempo en coche. Cada resultado abre indicaciones directas en Google Maps. Usa precios públicos de MITECO, rutas reales de openrouteservice (HeiGIT), un prefiltro geoespacial métrico y Matrix para medir recorridos reales por carretera.
 
 ## Arquitectura
 

@@ -41,17 +41,16 @@ function showPopup(feature) {
 function setMode(mode) {
   state.mode = mode;
   const nearby = mode === "nearby";
-  $("#search-form").classList.toggle("hidden", nearby); $("#nearby-form").classList.toggle("hidden", !nearby);
-  $("#route-tab").classList.toggle("active", !nearby); $("#nearby-tab").classList.toggle("active", nearby);
-  $("#route-tab").setAttribute("aria-selected", String(!nearby)); $("#nearby-tab").setAttribute("aria-selected", String(nearby));
+  const place = mode === "place";
+  $("#search-form").classList.toggle("hidden", nearby || place); $("#nearby-form").classList.toggle("hidden", !nearby); $("#place-form").classList.toggle("hidden", !place);
+  for (const name of ["route", "nearby", "place"]) { const active = name === mode; $(`#${name}-tab`).classList.toggle("active", active); $(`#${name}-tab`).setAttribute("aria-selected", String(active)); }
   $("#status").textContent = "";
 }
 $("#route-tab").addEventListener("click", () => setMode("route"));
 $("#nearby-tab").addEventListener("click", () => setMode("nearby"));
-$("#limit-type").addEventListener("change", (event) => {
-  const time = event.target.value === "time"; $("#limit-unit").textContent = time ? "min" : "km";
-  $("#limit-value").max = time ? "120" : "200"; $("#limit-value").value = time ? "15" : "10";
-});
+$("#place-tab").addEventListener("click", () => setMode("place"));
+function setupLimit(prefix = "") { $(`#${prefix}limit-type`).addEventListener("change", (event) => { const time = event.target.value === "time"; $(`#${prefix}limit-unit`).textContent = time ? "min" : "km"; $(`#${prefix}limit-value`).max = time ? "120" : "200"; $(`#${prefix}limit-value`).value = time ? "15" : "10"; }); }
+setupLimit(); setupLimit("place-");
 
 function setupAutocomplete(name) {
   const input = $(`#${name}`), box = $(`#${name}-results`);
@@ -63,14 +62,14 @@ function setupAutocomplete(name) {
   }));
   document.addEventListener("click", (event) => { if (!box.parentElement.contains(event.target)) box.replaceChildren(); });
 }
-setupAutocomplete("origin"); setupAutocomplete("destination");
+setupAutocomplete("origin"); setupAutocomplete("destination"); setupAutocomplete("place");
 $("#detour").addEventListener("input", (event) => { $("#detour-value").textContent = `${event.target.value} ${event.target.value === "1" ? "minuto" : "minutos"}`; });
 $(".swap").addEventListener("click", () => { [state.origin, state.destination] = [state.destination, state.origin]; const value = $("#origin").value; $("#origin").value = $("#destination").value; $("#destination").value = value; });
 
 async function resolveLocation(name) {
   if (state[name]) return state[name]; const query = $(`#${name}`).value.trim();
   const response = await fetch(`api/geocode?q=${encodeURIComponent(query)}`), data = await response.json();
-  if (!response.ok || !data.results?.length) throw new Error(`No hemos encontrado ${name === "origin" ? "el origen" : "el destino"}.`);
+  if (!response.ok || !data.results?.length) { const labels = { origin: "el origen", destination: "el destino", place: "la dirección" }; throw new Error(`No hemos encontrado ${labels[name]}.`); }
   state[name] = data.results[0]; return state[name];
 }
 
@@ -80,12 +79,12 @@ function pointFeature(location, kind, label, station = null) {
 
 function render(data, mode = "route") {
   $("#summary").classList.remove("hidden"); $("#results-layout").classList.remove("hidden"); initializeMap(); map.updateSize();
-  const nearby = mode === "nearby"; $("#summary").replaceChildren(); const title = document.createElement("strong"); const detail = document.createElement("span");
-  if (nearby) { const unit = data.meta.limit_type === "time" ? "minutos en coche" : "km"; title.textContent = "Gasolineras más baratas cerca de ti"; detail.textContent = `Hasta ${formatNumber(data.meta.limit_value, 0)} ${unit}`; }
+  const nearby = mode !== "route"; $("#summary").replaceChildren(); const title = document.createElement("strong"); const detail = document.createElement("span");
+  if (nearby) { const unit = data.meta.limit_type === "time" ? "minutos en coche" : "km"; title.textContent = mode === "place" ? `Gasolineras más baratas cerca de ${data.location.label}` : "Gasolineras más baratas cerca de ti"; detail.textContent = `Hasta ${formatNumber(data.meta.limit_value, 0)} ${unit}`; }
   else { title.textContent = `Ruta: ${state.origin.label} → ${state.destination.label}`; detail.textContent = `${formatNumber(data.route.distance_km, 0)} km · ${duration(data.route.duration_minutes)}`; }
   $("#summary").append(title, detail); $("#count").textContent = `${data.stations.length} resultados`; $("#destination-legend").classList.toggle("hidden", nearby); $("#reset-map").textContent = nearby ? "Ver todas" : "Ver ruta completa";
   routeSource.clear(); stationsSource.clear(); endpointsSource.clear(); state.markers.clear(); popupOverlay.setPosition(undefined);
-  if (nearby) { endpointsSource.addFeature(pointFeature(data.location, "origin", "Tú")); state.routeExtent = ol.extent.boundingExtent([[data.location.longitude, data.location.latitude], ...data.stations.map((station) => [station.longitude, station.latitude])].map((coordinates) => ol.proj.fromLonLat(coordinates))); }
+  if (nearby) { endpointsSource.addFeature(pointFeature(data.location, "origin", mode === "place" ? "A" : "Tú")); state.routeExtent = ol.extent.boundingExtent([[data.location.longitude, data.location.latitude], ...data.stations.map((station) => [station.longitude, station.latitude])].map((coordinates) => ol.proj.fromLonLat(coordinates))); }
   else { const route = new ol.format.GeoJSON().readFeature({ type: "Feature", properties: {}, geometry: data.route.geometry }, { dataProjection: "EPSG:4326", featureProjection: "EPSG:3857" }); routeSource.addFeature(route); state.routeExtent = route.getGeometry().getExtent(); endpointsSource.addFeatures([pointFeature(state.origin, "origin", "A"), pointFeature(state.destination, "destination", "B")]); }
   const list = $("#stations"); list.replaceChildren();
   if (!data.stations.length) { const empty = document.createElement("div"); empty.className = "empty"; empty.textContent = nearby ? "No hemos encontrado gasolineras dentro del límite indicado. Prueba a ampliarlo." : `No hemos encontrado gasolineras alcanzables con ${$("#autonomy").value} km de autonomía y un desvío máximo de ${$("#detour").value} minutos.`; list.append(empty); }
@@ -125,4 +124,11 @@ $("#nearby-form").addEventListener("submit", async (event) => {
   try { const location = await currentLocation(); button.textContent = "Comparando precios…"; $("#status").textContent = "Calculando distancias por carretera y comparando precios reales…"; const response = await fetch("api/nearby", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ location, fuel_type: $("#nearby-fuel").value, limit_type: $("#limit-type").value, limit_value: Number($("#limit-value").value) }) }); const data = await response.json(); if (!response.ok) throw new Error(data.detail || "No se ha podido completar la búsqueda."); render(data, "nearby"); $("#status").textContent = ""; $("#status").className = ""; }
   catch (error) { $("#status").className = "error"; $("#status").textContent = error.message || "No se ha podido completar la búsqueda."; }
   finally { button.disabled = false; button.innerHTML = "Usar mi ubicación <span>⌖</span>"; }
+});
+
+$("#place-form").addEventListener("submit", async (event) => {
+  event.preventDefault(); const button = $("#place-submit"); button.disabled = true; button.textContent = "Buscando la dirección…"; $("#status").className = "loading"; $("#status").textContent = "Localizando la zona indicada…";
+  try { const location = await resolveLocation("place"); button.textContent = "Comparando precios…"; $("#status").textContent = "Calculando distancias por carretera y comparando precios reales…"; const response = await fetch("api/nearby", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ location, fuel_type: $("#place-fuel").value, limit_type: $("#place-limit-type").value, limit_value: Number($("#place-limit-value").value) }) }); const data = await response.json(); if (!response.ok) throw new Error(data.detail || "No se ha podido completar la búsqueda."); render(data, "place"); $("#status").textContent = ""; $("#status").className = ""; }
+  catch (error) { $("#status").className = "error"; $("#status").textContent = error.message || "No se ha podido completar la búsqueda."; }
+  finally { button.disabled = false; button.innerHTML = "Buscar en esta zona <span>→</span>"; }
 });

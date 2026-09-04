@@ -18,6 +18,7 @@
       <div class="search-tabs" role="tablist" aria-label="Tipo de búsqueda">
         <button id="route-tab" class="search-tab active" type="button" role="tab" aria-selected="true">En una ruta</button>
         <button id="nearby-tab" class="search-tab" type="button" role="tab" aria-selected="false">Más baratas cerca de mí</button>
+        <button id="place-tab" class="search-tab" type="button" role="tab" aria-selected="false">Cerca de una dirección</button>
       </div>
       <form id="search-form" class="search-fields route-fields">
         <div class="field autocomplete"><label for="origin">Origen</label><input id="origin" autocomplete="off" placeholder="Madrid" maxlength="200" required><div class="suggestions" id="origin-results"></div></div>
@@ -34,6 +35,13 @@
         <div class="field"><label for="limit-type">Buscar por</label><select id="limit-type"><option value="distance">Distancia</option><option value="time">Tiempo en coche</option></select></div>
         <div class="field"><label for="limit-value">Máximo</label><div class="input-suffix"><input type="number" id="limit-value" min="1" max="200" value="10" required><span id="limit-unit">km</span></div></div>
         <button class="primary location-button" id="nearby-submit" type="submit">Usar mi ubicación <span>⌖</span></button>
+      </form>
+      <form id="place-form" class="search-fields place-fields hidden">
+        <div class="field autocomplete"><label for="place">Dirección</label><input id="place" autocomplete="off" placeholder="Calle, plaza, ciudad…" maxlength="200" required><div class="suggestions" id="place-results"></div></div>
+        <div class="field"><label for="place-fuel">Combustible</label><select id="place-fuel"><option value="diesel">Diésel</option><option value="gasolina_95">Gasolina 95</option><option value="gasolina_98">Gasolina 98</option><option value="diesel_premium">Diésel premium</option></select></div>
+        <div class="field"><label for="place-limit-type">Buscar por</label><select id="place-limit-type"><option value="distance">Distancia</option><option value="time">Tiempo en coche</option></select></div>
+        <div class="field"><label for="place-limit-value">Máximo</label><div class="input-suffix"><input type="number" id="place-limit-value" min="1" max="200" value="10" required><span id="place-limit-unit">km</span></div></div>
+        <button class="primary" id="place-submit" type="submit">Buscar en esta zona <span>→</span></button>
       </form>
     </section>
     <div id="status" role="status" aria-live="polite"></div>
@@ -54,6 +62,6 @@
   </main>
   <footer>Datos de precios del Ministerio de Industria · Rutas de openrouteservice · © OpenStreetMap</footer>
   <script src="https://cdn.jsdelivr.net/npm/ol@10.6.1/dist/ol.js"></script>
-  <script src="static/app.js?v=9"></script>
+  <script src="static/app.js?v=10"></script>
 </body>
 </html>
