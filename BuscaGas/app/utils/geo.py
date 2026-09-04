@@ -7,6 +7,17 @@ from shapely.ops import transform
 from app.schemas import GasStation
 
 
+def distance_km(first_lat: float, first_lon: float, second_lat: float, second_lon: float) -> float:
+    """Return the geodesic distance between two WGS84 points in kilometres."""
+    from math import asin, cos, radians, sin, sqrt
+
+    lat1, lat2 = radians(first_lat), radians(second_lat)
+    delta_lat = lat2 - lat1
+    delta_lon = radians(second_lon - first_lon)
+    value = sin(delta_lat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(delta_lon / 2) ** 2
+    return 6371.0088 * 2 * asin(sqrt(value))
+
+
 def corridor_km(max_detour_minutes: float) -> float:
     return min(30.0, max(5.0, max_detour_minutes * 1.5))
 

@@ -9,7 +9,7 @@ from fastapi.templating import Jinja2Templates
 
 from app.config import get_settings
 from app.dependencies import get_optimizer, get_routing
-from app.schemas import SearchRequest, SearchResult
+from app.schemas import NearbySearchRequest, NearbySearchResult, SearchRequest, SearchResult
 from app.services.miteco import MitecoService
 from app.services.optimizer import StationOptimizer
 from app.services.routing import OrsRoutingService, RoutingNotConfigured, RoutingService
@@ -60,7 +60,9 @@ async def geocode(
     except RoutingNotConfigured as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except (httpx.HTTPError, KeyError, ValueError) as exc:
-        raise HTTPException(status_code=503, detail="No se ha podido consultar el buscador de lugares.") from exc
+        raise HTTPException(
+            status_code=503, detail="No se ha podido consultar el buscador de lugares."
+        ) from exc
 
 
 @app.post("/api/search", response_model=SearchResult)
@@ -77,4 +79,23 @@ async def search(payload: SearchRequest, optimizer: StationOptimizer = Depends(g
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except (httpx.HTTPError, KeyError, ValueError) as exc:
         logging.getLogger(__name__).error("External service failure: %s", type(exc).__name__)
-        raise HTTPException(status_code=503, detail="No se ha podido calcular la ruta o consultar los precios. Inténtalo de nuevo.") from exc
+        raise HTTPException(
+            status_code=503,
+            detail="No se ha podido calcular la ruta o consultar los precios. Inténtalo de nuevo.",
+        ) from exc
+
+
+@app.post("/api/nearby", response_model=NearbySearchResult)
+async def nearby(payload: NearbySearchRequest, optimizer: StationOptimizer = Depends(get_optimizer)):
+    try:
+        return await optimizer.find_nearby_stations(
+            payload.location, payload.fuel_type, payload.limit_type, payload.limit_value
+        )
+    except RoutingNotConfigured as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except (httpx.HTTPError, KeyError, ValueError) as exc:
+        logging.getLogger(__name__).error("External service failure: %s", type(exc).__name__)
+        raise HTTPException(
+            status_code=503,
+            detail="No se han podido consultar las gasolineras cercanas. Inténtalo de nuevo.",
+        ) from exc
