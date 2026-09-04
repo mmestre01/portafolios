@@ -54,7 +54,7 @@ sync_tree() {
   local relative="$1"
   [[ -d "$SOURCE_DIR/$relative" ]] || return 0
   mkdir -p "$PRODUCTION_DIR/$relative"
-  rsync -a --delete \
+  rsync -a --delete --no-perms --chmod=Du=rwx,Dgo=rx,Fu=rw,Fgo=r \
     --exclude='.env' --exclude='*.db' --exclude='*.sqlite*' \
     --exclude='venv/' --exclude='.venv/' --exclude='node_modules/' \
     --exclude='build/' --exclude='dist/' \
@@ -72,11 +72,13 @@ sync_tree raspberry-digame-client
 sync_tree felices26Gema
 
 if changed gitweb/gitweb-frontend; then
-  rsync -a --delete "$SOURCE_DIR/gitweb/gitweb-frontend/build/" \
+  rsync -a --delete --no-perms --chmod=Du=rwx,Dgo=rx,Fu=rw,Fgo=r \
+    "$SOURCE_DIR/gitweb/gitweb-frontend/build/" \
     "$PRODUCTION_DIR/gitweb/gitweb-frontend/build/"
 fi
 if changed felices26Gema; then
-  rsync -a --delete "$SOURCE_DIR/felices26Gema/dist/" \
+  rsync -a --delete --no-perms --chmod=Du=rwx,Dgo=rx,Fu=rw,Fgo=r \
+    "$SOURCE_DIR/felices26Gema/dist/" \
     "$PRODUCTION_DIR/felices26Gema/dist/"
 fi
 
