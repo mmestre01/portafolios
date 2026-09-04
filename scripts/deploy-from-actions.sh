@@ -23,7 +23,7 @@ echo "Deploying $CURRENT_SHA (previous: ${PREVIOUS_SHA:-none})"
 # Build in the runner workspace. Production is not touched if a build fails.
 if changed gitweb/gitweb-frontend; then
   npm --prefix "$SOURCE_DIR/gitweb/gitweb-frontend" ci
-  npm --prefix "$SOURCE_DIR/gitweb/gitweb-frontend" run build
+  CI=false npm --prefix "$SOURCE_DIR/gitweb/gitweb-frontend" run build
 fi
 
 if changed felices26Gema; then
