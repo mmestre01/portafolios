@@ -1,0 +1,113 @@
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+
+    server_name _;
+
+    # Landing principal
+    root /home/mmestre01/Desktop/portafolios;
+    index index.html;
+
+    # Landing / estaticos generales
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+    # Frontend de GitWeb (React build)
+    location /gitweb/ {
+        alias /home/mmestre01/Desktop/portafolios/gitweb/gitweb-frontend/build/;
+        try_files $uri $uri/ /gitweb/index.html;
+    }
+
+    # Minijuego Felices 26, Gema
+    location = /felices26Gema {
+        return 301 /felices26Gema/;
+    }
+
+    location /felices26Gema/ {
+        alias /home/mmestre01/Desktop/portafolios/felices26Gema/dist/;
+        try_files $uri $uri/ /felices26Gema/index.html;
+    }
+
+    # BuscaGas (FastAPI en 8003)
+    location = /BuscaGas {
+        return 301 /BuscaGas/;
+    }
+
+    location /BuscaGas/ {
+        proxy_pass http://127.0.0.1:8003/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Prefix /BuscaGas;
+    }
+
+    # API de GitWeb -> Flask en Gunicorn
+    location /gitweb/api/ {
+        proxy_pass http://127.0.0.1:5000/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Digame como subruta del dominio
+    location = /digame {
+        proxy_pass http://127.0.0.1:5002/digame;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /digame/ {
+        proxy_pass http://127.0.0.1:5002;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+
+    location /api/digame/ {
+        proxy_pass http://127.0.0.1:5002;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location = /ws/digame {
+        proxy_pass http://127.0.0.1:5002;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+
+    # API Rift en 5001
+    location /apirift/ {
+        proxy_pass http://127.0.0.1:5001;
+        proxy_http_version 1.1;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Estaticos de API Rift si tu app los sirve como /static/...
+    location /static/ {
+        alias /home/mmestre01/Desktop/portafolios/apirift/static/;
+    }
+}

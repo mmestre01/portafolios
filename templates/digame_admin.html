@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Panel Admin Dígame</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+    main { max-width: 1100px; margin: 0 auto; background: white; border-radius: 14px; padding: 24px; box-shadow: 0 18px 40px rgba(0,0,0,.08); }
+    h1, h2 { margin-top: 0; }
+    .notice { padding: 14px; border-radius: 12px; margin-bottom: 18px; background: #eff6ff; color: #1e40af; }
+    .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    th, td { padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: left; }
+    th { background: #f8fafc; }
+    button { border: none; border-radius: 10px; padding: 10px 14px; font-size: .95rem; cursor: pointer; }
+    .btn-primary { background: #2563eb; color: white; }
+    .btn-secondary { background: #475569; color: white; }
+    .btn-danger { background: #dc2626; color: white; }
+    .status-pill { display: inline-flex; padding: 6px 10px; border-radius: 999px; background: #e2e8f0; color: #0f172a; font-size: .85rem; }
+    .header-row { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="header-row">
+      <div>
+        <h1>Panel Admin Dígame</h1>
+        <p>Estado del sistema: <strong>{{ status.system_status }}</strong></p>
+        <p>Raspberry conectada: <strong>{{ 'Sí' if status.raspberry_connected else 'No' }}</strong></p>
+        <p>Cola: <strong>{{ status.queue_length }}/{{ status.queue_max }}</strong></p>
+      </div>
+      <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
+        <button class="btn-secondary" id="pause-button">Pausar</button>
+        <button class="btn-primary" id="resume-button">Reactivar</button>
+        <button class="btn-danger" id="clear-queue">Limpiar cola</button>
+      </div>
+    </div>
+
+    <section>
+      <h2>Solicitudes y dispositivos</h2>
+      <table>
+        <thead>
+          <tr><th>ID</th><th>Nombre</th><th>Token</th><th>Estado</th><th>Último acceso</th><th>Acciones</th></tr>
+        </thead>
+        <tbody>
+          {% for device in devices %}
+          <tr>
+            <td>{{ device.id }}</td>
+            <td>{{ device.name or 'Sin nombre' }}</td>
+            <td><code>{{ device.token[:8] }}…</code></td>
+            <td><span class="status-pill">{{ device.status }}</span></td>
+            <td>{{ device.last_seen_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+            <td>
+              {% if device.status == 'pending' %}
+              <button class="btn-primary admin-action" data-action="approve" data-id="{{ device.id }}">Aprobar</button>
+              <button class="btn-secondary admin-action" data-action="reject" data-id="{{ device.id }}">Rechazar</button>
+              {% elif device.status == 'approved' %}
+              <button class="btn-danger admin-action" data-action="revoke" data-id="{{ device.id }}">Revocar</button>
+              {% else %}
+              <span class="small">Sin acciones</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+
+    <section style="margin-top: 28px;">
+      <h2>Cola de reproducción</h2>
+      <table>
+        <thead>
+          <tr><th>ID</th><th>Solicitud</th><th>Estado</th><th>Archivo</th><th>Creado</th></tr>
+        </thead>
+        <tbody>
+          {% for audio in queue %}
+          <tr>
+            <td>{{ audio.id }}</td>
+            <td>{{ audio.device.name or 'Sin nombre' }}</td>
+            <td><span class="status-pill">{{ audio.status }}</span></td>
+            <td>{{ audio.original_filename or audio.filename }}</td>
+            <td>{{ audio.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+  </main>
+  <script>
+    function apiPath(path) {
+      return path;
+    }
+
+    async function postAction(path) {
+      const response = await fetch(apiPath(path), { method: 'POST' });
+      if (!response.ok) {
+        alert('Error en la acción: ' + response.statusText);
+      }
+      window.location.reload();
+    }
+
+    document.querySelectorAll('.admin-action').forEach(button => {
+      button.addEventListener('click', () => {
+        const action = button.dataset.action;
+        const id = button.dataset.id;
+        postAction('/api/digame/admin/requests/' + id + '/' + action);
+      });
+    });
+
+    document.getElementById('pause-button').addEventListener('click', () => postAction('/api/digame/admin/pause'));
+    document.getElementById('resume-button').addEventListener('click', () => postAction('/api/digame/admin/resume'));
+    document.getElementById('clear-queue').addEventListener('click', () => {
+      if (confirm('¿Limpiar toda la cola de reproducción?')) {
+        postAction('/api/digame/admin/clear-queue');
+      }
+    });
+  </script>
+</body>
+</html>

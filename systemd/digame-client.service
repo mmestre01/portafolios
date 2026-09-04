@@ -1,0 +1,20 @@
+[Unit]
+Description=Digame Raspberry audio client
+After=network.target sound.target digame.service
+Wants=digame.service
+
+[Service]
+Type=simple
+User=mmestre01
+SupplementaryGroups=audio
+WorkingDirectory=/home/mmestre01/Desktop/portafolios/raspberry-digame-client
+EnvironmentFile=-/home/mmestre01/Desktop/portafolios/.env
+Environment="SERVER_URL=http://127.0.0.1:5002"
+Environment="ALSA_DEVICE=plughw:2,0"
+Environment="PYTHONUNBUFFERED=1"
+ExecStart=/home/mmestre01/Desktop/portafolios/venv/bin/python /home/mmestre01/Desktop/portafolios/raspberry-digame-client/client.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,12 @@
+fastapi>=0.115,<0.116
+starlette>=0.40,<0.42
+uvicorn[standard]>=0.30,<1
+pydantic>=2.8,<3
+pydantic-settings>=2.4,<3
+httpx>=0.27,<0.28
+anyio>=4.4,<4.8
+Jinja2>=3.1,<4
+Shapely>=2.0,<3
+pyproj>=3.6,<4
+cachetools>=5.5,<7
+tenacity>=9,<10

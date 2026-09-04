@@ -3,20 +3,30 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from flask_mail import Mail, Message
+from flask_sock import Sock
 import requests
 import os
 import random
 import string
+import secrets
+import json
+import threading
+import time
 from urllib.parse import quote
+from uuid import uuid4
+from werkzeug.utils import secure_filename
 
 # Configuración de la aplicación
-app = Flask(__name__)
+app = Flask(__name__, static_url_path='/digame/static')
 app.config.from_object('config.ProductionConfig' if 'DATABASE_URL' in os.environ else 'config.Config')
 
 # Inicialización de la base de datos y bcrypt
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 mail = Mail(app)
+
+# WebSocket para Raspberry Digame
+sock = Sock(app)
 
 class User(db.Model):
     __tablename__ = 'tb_usuario'
@@ -26,13 +36,12 @@ class User(db.Model):
     password = db.Column(db.String(150), nullable=False)
     summoner_name = db.Column(db.String(150), unique=True, nullable=True)
     tagline = db.Column(db.String(10), nullable=True)
-    profile_picture = db.Column(db.String(255), nullable=True)  # Ruta de la foto de perfil
+    profile_picture = db.Column(db.String(255), nullable=True)
     verification_code = db.Column(db.String(6), nullable=True)
     is_verified = db.Column(db.Boolean, default=False)
-    partida_en_curso = db.Column(db.Boolean, default=False)  # Nuevo campo para marcar si hay partida en curso
+    partida_en_curso = db.Column(db.Boolean, default=False)
     puntos = db.relationship('PuntosPersona', back_populates='usuario', uselist=False)
     apuestas = db.relationship('Apuesta', back_populates='usuario')
-
 
 
 # Modelo de puntos de usuario
@@ -72,8 +81,284 @@ class ChatMessage(db.Model):
     user = db.relationship('User', backref='messages')
 
 
+class DigameDevice(db.Model):
+    __tablename__ = 'tb_digame_device'
+    id = db.Column(db.Integer, primary_key=True)
+    token = db.Column(db.String(128), unique=True, nullable=False)
+    name = db.Column(db.String(150), nullable=True)
+    user_agent = db.Column(db.String(500), nullable=True)
+    status = db.Column(db.String(20), nullable=False, default='pending')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_seen_at = db.Column(db.DateTime, default=datetime.utcnow)
+    audios = db.relationship('DigameAudio', back_populates='device')
 
-from flask import Markup
+class DigameAudio(db.Model):
+    __tablename__ = 'tb_digame_audio'
+    id = db.Column(db.Integer, primary_key=True)
+    device_id = db.Column(db.Integer, db.ForeignKey('tb_digame_device.id'), nullable=False)
+    filename = db.Column(db.String(300), nullable=False)
+    original_filename = db.Column(db.String(300), nullable=True)
+    mime_type = db.Column(db.String(100), nullable=False)
+    size_bytes = db.Column(db.Integer, nullable=False)
+    status = db.Column(db.String(20), nullable=False, default='queued')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    played_at = db.Column(db.DateTime, nullable=True)
+    error_message = db.Column(db.String(500), nullable=True)
+    device = db.relationship('DigameDevice', back_populates='audios')
+
+class DigameSetting(db.Model):
+    __tablename__ = 'tb_digame_setting'
+    key = db.Column(db.String(100), primary_key=True)
+    value = db.Column(db.String(500), nullable=False)
+
+
+def digame_data_dir():
+    data_dir = os.path.join(os.path.dirname(__file__), 'data')
+    os.makedirs(data_dir, exist_ok=True)
+    return data_dir
+
+
+def digame_upload_dir():
+    upload_dir = os.path.join(app.static_folder, 'digame', 'uploads')
+    os.makedirs(upload_dir, exist_ok=True)
+    return upload_dir
+
+
+def generate_device_token():
+    return secrets.token_urlsafe(32)
+
+
+def get_client_token():
+    token = request.headers.get('X-DIGAME-TOKEN')
+    if token:
+        return token
+    token = request.form.get('token') or request.args.get('token')
+    if token:
+        return token
+    data = request.get_json(silent=True)
+    if data:
+        return data.get('token')
+    return None
+
+
+def load_digame_settings():
+    if not app.config.get('DIGAME_ENABLED', True):
+        return {'enabled': False}
+    enabled_setting = DigameSetting.query.get('enabled')
+    if enabled_setting:
+        return {'enabled': enabled_setting.value.lower() == 'true'}
+    return {'enabled': app.config.get('DIGAME_ENABLED', True)}
+
+
+def set_digame_enabled(value: bool):
+    setting = DigameSetting.query.get('enabled')
+    if not setting:
+        setting = DigameSetting(key='enabled', value=str(value).lower())
+        db.session.add(setting)
+    else:
+        setting.value = str(value).lower()
+    db.session.commit()
+
+
+def set_digame_setting(key, value):
+    setting = DigameSetting.query.get(key)
+    if not setting:
+        setting = DigameSetting(key=key, value=value)
+        db.session.add(setting)
+    else:
+        setting.value = value
+    db.session.commit()
+
+
+def touch_raspberry_seen():
+    set_digame_setting('raspberry_last_seen_at', datetime.utcnow().isoformat())
+
+
+def mark_raspberry_disconnected():
+    set_digame_setting('raspberry_last_seen_at', '')
+
+
+def raspberry_is_connected():
+    if app.config.get('DIGAME_MOCK_RASPBERRY', False):
+        return True
+    setting = DigameSetting.query.get('raspberry_last_seen_at')
+    if not setting or not setting.value:
+        return False
+    try:
+        last_seen = datetime.fromisoformat(setting.value)
+    except ValueError:
+        return False
+    return (datetime.utcnow() - last_seen).total_seconds() < 30
+
+
+def get_device_by_token(token):
+    if not token:
+        return None
+    return DigameDevice.query.filter_by(token=token).first()
+
+
+def create_or_update_device(token, user_agent, name=None):
+    if not token:
+        token = generate_device_token()
+    device = get_device_by_token(token)
+    if device is None:
+        device = DigameDevice(token=token, user_agent=user_agent, name=name, status='pending')
+        db.session.add(device)
+    else:
+        device.user_agent = user_agent
+        if name:
+            device.name = name
+        if device.status not in ['approved', 'rejected', 'revoked']:
+            device.status = 'pending'
+        device.last_seen_at = datetime.utcnow()
+    db.session.commit()
+    return device
+
+
+def queue_audio(device, file_storage):
+    content_type = file_storage.mimetype
+    if content_type not in app.config['DIGAME_ALLOWED_MIMES']:
+        return None, 'MIME no permitido'
+
+    file_storage.seek(0, os.SEEK_END)
+    size = file_storage.tell()
+    file_storage.seek(0)
+
+    if size == 0:
+        return None, 'Archivo vacío'
+    if size > app.config['DIGAME_MAX_FILE_MB'] * 1024 * 1024:
+        return None, 'Archivo demasiado grande'
+
+    active_audio_count = DigameAudio.query.filter(DigameAudio.status.in_(['queued', 'playing'])).count()
+    if active_audio_count >= app.config['DIGAME_MAX_QUEUE']:
+        return None, 'La cola está llena'
+
+    upload_dir = digame_upload_dir()
+    safe_name = secure_filename(file_storage.filename)
+    stored_name = f"{uuid4().hex}_{safe_name}"
+    file_path = os.path.join(upload_dir, stored_name)
+    file_storage.save(file_path)
+
+    audio = DigameAudio(
+        device_id=device.id,
+        filename=stored_name,
+        original_filename=safe_name,
+        mime_type=content_type,
+        size_bytes=size,
+        status='queued'
+    )
+    db.session.add(audio)
+    db.session.commit()
+    return audio, None
+
+
+def audio_response(audio):
+    return {
+        'id': audio.id,
+        'device_id': audio.device_id,
+        'status': audio.status,
+        'original_filename': audio.original_filename,
+        'mime_type': audio.mime_type,
+        'size_bytes': audio.size_bytes,
+        'created_at': audio.created_at.isoformat() if audio.created_at else None,
+        'updated_at': audio.updated_at.isoformat() if audio.updated_at else None,
+        'played_at': audio.played_at.isoformat() if audio.played_at else None,
+        'error_message': audio.error_message,
+        'audio_url': url_for('static', filename=f'digame/uploads/{audio.filename}', _external=True)
+    }
+
+
+def get_queue_items():
+    return DigameAudio.query.order_by(DigameAudio.created_at.asc()).all()
+
+
+def get_next_queued_audio():
+    return DigameAudio.query.filter_by(status='queued').order_by(DigameAudio.created_at.asc()).first()
+
+
+def mark_audio_played(audio):
+    audio.status = 'played'
+    audio.played_at = datetime.utcnow()
+    audio.error_message = None
+    db.session.commit()
+
+
+def mark_audio_error(audio, message):
+    audio.status = 'error'
+    audio.error_message = message
+    db.session.commit()
+
+
+def rabbit_is_connected():
+    return raspberry_is_connected()
+
+
+def require_admin_key():
+    provided = request.headers.get('X-DIGAME-ADMIN-KEY') or request.args.get('admin_key') or request.form.get('admin_key')
+    if provided == app.config['DIGAME_ADMIN_KEY']:
+        return True
+    return False
+
+
+def get_digame_status():
+    enabled = load_digame_settings().get('enabled', True)
+    queued_count = DigameAudio.query.filter_by(status='queued').count()
+    playing = DigameAudio.query.filter_by(status='playing').first()
+    return {
+        'enabled': enabled,
+        'mock': app.config['DIGAME_MOCK_RASPBERRY'],
+        'raspberry_connected': raspberry_is_connected(),
+        'queue_length': queued_count,
+        'queue_max': app.config['DIGAME_MAX_QUEUE'],
+        'current_playing': audio_response(playing) if playing else None,
+        'system_status': 'paused' if not enabled else 'active'
+    }
+
+
+def dispatch_mock_worker():
+    if not app.config['DIGAME_MOCK_RASPBERRY']:
+        return
+    if getattr(app, 'digame_mock_worker_started', False):
+        return
+    app.digame_mock_worker_started = True
+
+    def worker():
+        with app.app_context():
+            while True:
+                try:
+                    enabled = load_digame_settings().get('enabled', True)
+                    if not enabled:
+                        time.sleep(2)
+                        continue
+                    if DigameAudio.query.filter_by(status='playing').first():
+                        time.sleep(1)
+                        continue
+                    next_audio = get_next_queued_audio()
+                    if not next_audio:
+                        time.sleep(1)
+                        continue
+                    next_audio.status = 'playing'
+                    db.session.commit()
+                    time.sleep(2)
+                    mark_audio_played(next_audio)
+                except Exception:
+                    time.sleep(2)
+    thread = threading.Thread(target=worker, daemon=True)
+    thread.start()
+
+
+def send_raspberry_play_message(ws, audio):
+    payload = json.dumps({
+        'type': 'play',
+        'id': str(audio.id),
+        'audioUrl': url_for('static', filename=f'digame/uploads/{audio.filename}', _external=True)
+    })
+    ws.send(payload)
+
+
+from markupsafe import Markup
+
 def verificar_resultado_apuesta(apuesta):
     game_info = obtener_estado_partida(apuesta.id_partida)
     
@@ -794,13 +1079,220 @@ def send_message():
 
     return jsonify({'success': True})
 
+@app.route('/digame')
+@app.route('/digame/')
+def digame_page():
+    return render_template('digame.html')
+
+@app.route('/digame/admin', methods=['GET', 'POST'])
+def digame_admin():
+    if request.method == 'POST':
+        if require_admin_key():
+            session['digame_admin'] = True
+            return redirect(url_for('digame_admin'))
+        flash('Clave de administrador incorrecta.')
+
+    if not session.get('digame_admin'):
+        return render_template('digame_admin_login.html')
+
+    devices = DigameDevice.query.order_by(DigameDevice.created_at.desc()).all()
+    queue = get_queue_items()
+    status = get_digame_status()
+    return render_template('digame_admin.html', devices=devices, queue=queue, status=status)
+
+@app.route('/api/digame/status', methods=['GET'])
+def api_digame_status():
+    return jsonify(get_digame_status())
+
+@app.route('/api/digame/access/status', methods=['GET'])
+def api_digame_access_status():
+    token = get_client_token()
+    device = get_device_by_token(token)
+    if device is None:
+        return jsonify({'status': 'not_authorized', 'token': None})
+    device.last_seen_at = datetime.utcnow()
+    db.session.commit()
+    return jsonify({
+        'token': device.token,
+        'status': device.status,
+        'name': device.name,
+        'created_at': device.created_at.isoformat(),
+        'last_seen_at': device.last_seen_at.isoformat()
+    })
+
+@app.route('/api/digame/access/request', methods=['POST'])
+def api_digame_access_request():
+    payload = request.get_json(silent=True) or request.form
+    name = payload.get('name') if payload else None
+    token = get_client_token()
+    user_agent = request.headers.get('User-Agent', '')
+
+    device = create_or_update_device(token, user_agent, name=name)
+    if device.status in ['rejected', 'revoked']:
+        device.status = 'pending'
+        db.session.commit()
+
+    return jsonify({
+        'token': device.token,
+        'status': device.status,
+        'name': device.name,
+        'created_at': device.created_at.isoformat(),
+        'last_seen_at': device.last_seen_at.isoformat()
+    })
+
+@app.route('/api/digame/audio', methods=['POST'])
+def api_digame_audio():
+    token = get_client_token()
+    device = get_device_by_token(token)
+    if device is None or device.status != 'approved':
+        return jsonify({'error': 'Dispositivo no autorizado'}), 403
+
+    if not load_digame_settings().get('enabled', True):
+        return jsonify({'error': 'El sistema Digame está pausado'}), 403
+
+    audio_file = request.files.get('audio')
+    if audio_file is None:
+        return jsonify({'error': 'No se recibió audio'}), 400
+
+    audio, error_message = queue_audio(device, audio_file)
+    if error_message:
+        return jsonify({'error': error_message}), 400
+
+    return jsonify({'success': True, 'audio': audio_response(audio)})
+
+@app.route('/api/digame/admin/requests', methods=['GET'])
+def api_digame_admin_requests():
+    if not session.get('digame_admin') and not require_admin_key():
+        return jsonify({'error': 'No autorizado'}), 403
+
+    devices = DigameDevice.query.order_by(DigameDevice.created_at.desc()).all()
+    return jsonify([{
+        'id': device.id,
+        'token': device.token,
+        'name': device.name,
+        'status': device.status,
+        'user_agent': device.user_agent,
+        'created_at': device.created_at.isoformat(),
+        'last_seen_at': device.last_seen_at.isoformat()
+    } for device in devices])
+
+@app.route('/api/digame/admin/requests/<int:request_id>/approve', methods=['POST'])
+def api_digame_admin_approve(request_id):
+    if not session.get('digame_admin') and not require_admin_key():
+        return jsonify({'error': 'No autorizado'}), 403
+    device = DigameDevice.query.get(request_id)
+    if not device:
+        return jsonify({'error': 'Solicitud no encontrada'}), 404
+    device.status = 'approved'
+    device.last_seen_at = datetime.utcnow()
+    db.session.commit()
+    return jsonify({'success': True, 'status': device.status})
+
+@app.route('/api/digame/admin/requests/<int:request_id>/reject', methods=['POST'])
+def api_digame_admin_reject(request_id):
+    if not session.get('digame_admin') and not require_admin_key():
+        return jsonify({'error': 'No autorizado'}), 403
+    device = DigameDevice.query.get(request_id)
+    if not device:
+        return jsonify({'error': 'Solicitud no encontrada'}), 404
+    device.status = 'rejected'
+    db.session.commit()
+    return jsonify({'success': True, 'status': device.status})
+
+@app.route('/api/digame/admin/requests/<int:request_id>/revoke', methods=['POST'])
+def api_digame_admin_revoke(request_id):
+    if not session.get('digame_admin') and not require_admin_key():
+        return jsonify({'error': 'No autorizado'}), 403
+    device = DigameDevice.query.get(request_id)
+    if not device:
+        return jsonify({'error': 'Solicitud no encontrada'}), 404
+    device.status = 'revoked'
+    db.session.commit()
+    return jsonify({'success': True, 'status': device.status})
+
+@app.route('/api/digame/admin/pause', methods=['POST'])
+def api_digame_admin_pause():
+    if not session.get('digame_admin') and not require_admin_key():
+        return jsonify({'error': 'No autorizado'}), 403
+    set_digame_enabled(False)
+    return jsonify({'success': True, 'enabled': False})
+
+@app.route('/api/digame/admin/resume', methods=['POST'])
+def api_digame_admin_resume():
+    if not session.get('digame_admin') and not require_admin_key():
+        return jsonify({'error': 'No autorizado'}), 403
+    set_digame_enabled(True)
+    return jsonify({'success': True, 'enabled': True})
+
+@app.route('/api/digame/admin/clear-queue', methods=['POST'])
+def api_digame_admin_clear_queue():
+    if not session.get('digame_admin') and not require_admin_key():
+        return jsonify({'error': 'No autorizado'}), 403
+    DigameAudio.query.filter(DigameAudio.status.in_(['queued', 'playing'])).delete()
+    db.session.commit()
+    return jsonify({'success': True})
+
+@sock.route('/ws/digame')
+def ws_digame(ws):
+    token = request.args.get('token') or request.headers.get('X-RASPBERRY-TOKEN')
+    if token != app.config['RASPBERRY_TOKEN']:
+        ws.close()
+        return
+
+    app.digame_raspberry_connected = True
+    touch_raspberry_seen()
+    ws.send(json.dumps({'type': 'connected', 'mock': app.config['DIGAME_MOCK_RASPBERRY']}))
+
+    try:
+        while True:
+            touch_raspberry_seen()
+            enabled = load_digame_settings().get('enabled', True)
+            if not enabled:
+                time.sleep(1)
+                continue
+
+            current = DigameAudio.query.filter_by(status='playing').first()
+            if current:
+                message = ws.receive()
+                if message is None:
+                    break
+                payload = json.loads(message)
+                if payload.get('type') == 'played' and str(payload.get('id')) == str(current.id):
+                    mark_audio_played(current)
+                elif payload.get('type') == 'error':
+                    mark_audio_error(current, payload.get('message', 'Error de reproducción'))
+                continue
+
+            next_audio = get_next_queued_audio()
+            if not next_audio:
+                time.sleep(1)
+                continue
+
+            next_audio.status = 'playing'
+            db.session.commit()
+            send_raspberry_play_message(ws, next_audio)
+            message = ws.receive()
+            if message is None:
+                break
+            payload = json.loads(message)
+            if payload.get('type') == 'played' and str(payload.get('id')) == str(next_audio.id):
+                mark_audio_played(next_audio)
+            elif payload.get('type') == 'error':
+                mark_audio_error(next_audio, payload.get('message', 'Error de reproducción'))
+    finally:
+        app.digame_raspberry_connected = False
+        mark_raspberry_disconnected()
+
 # Crear tablas si no existen
-@app.before_first_request
 def initialize_database():
-    #db.drop_all()
-    db.create_all()
-    
-    print('Revisor de tablas ejecutado')
+    with app.app_context():
+        #db.drop_all()
+        db.create_all()
+        dispatch_mock_worker()
+        print('Revisor de tablas ejecutado')
+
+
+initialize_database()
 
 # Ejecuta la aplicación
 if __name__ == '__main__':

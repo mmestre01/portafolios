@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#14151f" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2314151f'/%3E%3Ctext x='32' y='42' text-anchor='middle' font-size='34' font-family='Arial' fill='%23ffe066'%3EG%3C/text%3E%3C/svg%3E" />
+    <title>Felices 26, Gema</title>
+  </head>
+  <body>
+    <div id="game-shell">
+      <div id="game-container" aria-label="Videojuego Felices 26, Gema"></div>
+      <section id="start-overlay" class="overlay">
+        <div class="overlay-panel">
+          <button id="sound-toggle" class="sound-toggle" type="button" aria-label="Activar o desactivar sonido">Sonido: sí</button>
+          <h1>FELICES 26, GEMA</h1>
+          <p>Destruye los problemas.</p>
+          <p>Protege el café y los dulces.</p>
+          <p>Sobrevive a la UCAM.</p>
+          <div class="instructions">
+            <span>Arrastra para moverte.</span>
+            <span>La nave dispara automáticamente.</span>
+            <span>No dispares a las cosas buenas.</span>
+            <span>Ordenador: ratón, A/D o flechas.</span>
+          </div>
+          <button id="play-button" class="primary-button" type="button">Jugar</button>
+        </div>
+      </section>
+      <section id="end-overlay" class="overlay hidden">
+        <div class="overlay-panel end-panel">
+          <h2>¡FELICES 26, GEMA!</h2>
+          <p>UCAM derrotada.</p>
+          <p>Paciencia parcialmente conservada.</p>
+          <dl id="final-stats" class="final-stats"></dl>
+          <p id="gift-message" class="gift-message"></p>
+          <button id="restart-button" class="primary-button" type="button">Jugar otra vez</button>
+        </div>
+      </section>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

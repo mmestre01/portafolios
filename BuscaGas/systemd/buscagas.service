@@ -1,0 +1,15 @@
+[Unit]
+Description=BuscaGas FastAPI
+After=network.target
+
+[Service]
+User=mmestre01
+Group=www-data
+WorkingDirectory=/home/mmestre01/Desktop/portafolios/BuscaGas
+EnvironmentFile=-/home/mmestre01/Desktop/portafolios/BuscaGas/.env
+ExecStart=/home/mmestre01/Desktop/portafolios/BuscaGas/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8003
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,15 @@
+[Unit]
+Description=Digame Raspberry client
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/path/to/raspberry-digame-client
+Environment="SERVER_URL=http://localhost:5000"
+Environment="RASPBERRY_TOKEN=change_me"
+ExecStart=/usr/bin/python3 /path/to/raspberry-digame-client/client.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

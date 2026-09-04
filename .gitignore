@@ -22,6 +22,7 @@ ENV/
 .Python
 python3-*.egg-info/
 *.log
+.deploy-commit
 
 # VS Code
 .vscode/
@@ -63,6 +64,10 @@ instance/
 # Local databases
 *.db
 *.sqlite*
+
+data/
+static/digame/uploads/
+raspberry-digame-client/downloads/
 
 # Others
 coverage/

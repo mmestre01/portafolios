@@ -1,0 +1,33 @@
+name: Deploy portfolio to Raspberry Pi
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: portafolios-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy production
+    runs-on: [self-hosted, linux, ARM64, raspberry-web]
+    timeout-minutes: 30
+    environment: production
+
+    steps:
+      - name: Check out the exact commit
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Deploy changed components
+        env:
+          GITHUB_SHA: ${{ github.sha }}
+        run: ./scripts/deploy-from-actions.sh

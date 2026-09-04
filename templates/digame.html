@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dígame</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; padding: 20px; background: #f7f7f7; color: #222; }
+    main { max-width: 720px; margin: 0 auto; background: white; border-radius: 14px; padding: 24px; box-shadow: 0 14px 30px rgba(0,0,0,.08); }
+    h1 { margin-top: 0; }
+    .notice { color: #555; margin-bottom: 20px; }
+    .status { margin: 16px 0; padding: 12px; border-radius: 10px; background: #eef2ff; color: #1e3a8a; }
+    .error { background: #fee2e2; color: #991b1b; }
+    .controls { display: grid; gap: 12px; }
+    button { border: none; border-radius: 10px; padding: 14px 18px; font-size: 1rem; cursor: pointer; background: #2563eb; color: white; }
+    button.secondary { background: #6b7280; }
+    button.danger { background: #dc2626; }
+    button:disabled { opacity: .6; cursor: not-allowed; }
+    label { display: block; margin-bottom: 12px; }
+    input { width: 100%; padding: 10px; border-radius: 10px; border: 1px solid #d1d5db; }
+    .small { font-size: .95rem; color: #555; }
+    #timer { font-size: 1.5rem; font-weight: 700; margin-top: 8px; }
+    .queue { margin-top: 18px; padding: 16px; background: #f3f4f6; border-radius: 12px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Dígame</h1>
+    <p>Pulsa el botón, habla y tu mensaje se escuchará por los altavoces.</p>
+    <p class="notice">No envíes gritos, insultos ni sonidos molestos.</p>
+
+    <div id="feedback" class="status">Cargando estado...</div>
+
+    <div id="request-container" style="display:none;" class="controls">
+      <label>Nombre opcional
+        <input id="device-name" type="text" placeholder="Ej. Sala de estar" maxlength="80" />
+      </label>
+      <button id="request-access">Solicitar acceso</button>
+    </div>
+
+    <div id="approved-container" style="display:none;" class="controls">
+      <div>
+        <button id="record-button">Empezar a grabar</button>
+        <button id="stop-button" class="secondary" disabled>Detener</button>
+      </div>
+      <div id="timer">00:00</div>
+      <p class="small">Máximo 10 segundos. Si paras antes, se enviará el audio.</p>
+    </div>
+
+    <div id="queue-info" class="queue" style="display:none;"></div>
+  </main>
+  <script src="{{ url_for('static', filename='digame/digame.js') }}"></script>
+</body>
+</html>

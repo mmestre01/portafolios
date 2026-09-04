@@ -1,0 +1,1 @@
+"""BuscaGas application package."""
