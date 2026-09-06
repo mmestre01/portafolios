@@ -33,6 +33,8 @@ class GasStation(Coordinates):
     municipality: str | None = None
     province: str | None = None
     prices: dict[str, float]
+    schedule: str | None = None
+    sale_type: str | None = None
 
 
 class Route(BaseModel):
@@ -77,6 +79,9 @@ class StationResult(Coordinates):
     distance_from_origin_km: float
     travel_duration_minutes: float | None = None
     travel_distance_km: float | None = None
+    prices: dict[str, float] = Field(default_factory=dict)
+    schedule: str | None = None
+    sale_type: str | None = None
 
 
 class RouteResult(BaseModel):

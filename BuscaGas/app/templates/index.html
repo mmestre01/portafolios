@@ -6,7 +6,7 @@
   <title>BuscaGas · Gasolineras en ruta</title>
   <link rel="preconnect" href="https://unpkg.com">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@10.6.1/ol.css">
-  <link rel="stylesheet" href="static/styles.css?v=8">
+  <link rel="stylesheet" href="static/styles.css?v=12">
 </head>
 <body>
   <header class="hero">
@@ -53,15 +53,27 @@
           <span><i class="legend-route"></i> Ruta</span>
           <span><i class="legend-origin">A</i> Origen</span>
           <span id="destination-legend"><i class="legend-destination">B</i> Destino</span>
-          <span><i class="legend-station"></i> Gasolinera</span>
+          <span><i class="legend-station cheap"></i> Más barata</span>
+          <span><i class="legend-station average"></i> Precio medio</span>
+          <span><i class="legend-station expensive"></i> Más cara</span>
         </div>
         <button id="reset-map" class="reset-map" type="button">Ver ruta completa</button>
       </div>
-      <div class="results-panel"><div class="results-head"><div><span class="eyebrow">MEJORES OPCIONES</span><h2>Gasolineras encontradas</h2></div><span id="count" class="count"></span></div><div id="stations"></div></div>
+      <div class="results-panel">
+        <div class="results-head"><div><span class="eyebrow">MEJORES OPCIONES</span><h2>Gasolineras encontradas</h2></div><span id="count" class="count"></span></div>
+        <div id="results-tools" class="results-tools">
+          <div class="field"><label for="sort-results">Ordenar por</label><select id="sort-results"><option value="recommended">Mejor opción</option><option value="price">Más barata</option><option value="distance">Más cercana</option><option value="time">Menor tiempo</option><option value="detour">Menor desvío</option><option value="savings">Mayor ahorro</option></select></div>
+          <div class="field"><label for="brand-filter">Marca</label><select id="brand-filter"><option value="">Todas</option></select></div>
+          <label class="check-filter"><input id="open-24-filter" type="checkbox"> Solo 24 horas</label>
+          <label class="check-filter"><input id="public-filter" type="checkbox"> Venta al público</label>
+        </div>
+        <p id="average-price" class="average-price"></p>
+        <div id="stations"></div>
+      </div>
     </section>
   </main>
   <footer>Datos de precios del Ministerio de Industria · Rutas de openrouteservice · © OpenStreetMap</footer>
   <script src="https://cdn.jsdelivr.net/npm/ol@10.6.1/dist/ol.js"></script>
-  <script src="static/app.js?v=10"></script>
+  <script src="static/app.js?v=12"></script>
 </body>
 </html>

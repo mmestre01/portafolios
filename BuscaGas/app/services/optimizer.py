@@ -84,6 +84,9 @@ class StationOptimizer:
                 distance_from_origin_km=travel_km,
                 travel_duration_minutes=travel_minutes,
                 travel_distance_km=travel_km,
+                prices=station.prices,
+                schedule=station.schedule,
+                sale_type=station.sale_type,
             )
             for station, travel_minutes, travel_km in evaluated[: self.max_results]
         ]
@@ -168,6 +171,9 @@ class StationOptimizer:
                 detour_minutes=detour / 60,
                 extra_distance_km=extra / 1000,
                 distance_from_origin_km=distance_from_origin / 1000,
+                prices=station.prices,
+                schedule=station.schedule,
+                sale_type=station.sale_type,
             )
             for station, detour, extra, price, distance_from_origin in valid[: self.max_results]
         ]
