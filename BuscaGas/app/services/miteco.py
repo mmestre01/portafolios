@@ -44,6 +44,8 @@ def normalize_station(raw: dict) -> GasStation | None:
             latitude=latitude,
             longitude=longitude,
             prices=prices,
+            schedule=(raw.get("Horario") or None),
+            sale_type=(raw.get("Tipo Venta") or None),
         )
     except ValueError:
         return None
@@ -51,8 +53,7 @@ def normalize_station(raw: dict) -> GasStation | None:
 
 def _is_transient(exc: BaseException) -> bool:
     return isinstance(exc, (httpx.TimeoutException, httpx.NetworkError)) or (
-        isinstance(exc, httpx.HTTPStatusError)
-        and exc.response.status_code in TRANSIENT_STATUS
+        isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code in TRANSIENT_STATUS
     )
 
 
