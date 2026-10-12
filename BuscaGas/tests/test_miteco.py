@@ -12,19 +12,37 @@ def test_parse_decimal():
 
 
 def test_normalization_and_invalid_coordinates():
-    raw = {"IDEESS": "7", "Rótulo": "PRUEBA", "Latitud": "40,4", "Longitud (WGS84)": "-3,7", "Precio Gasoleo A": "1,399", "Precio Gasolina 95 E5": "1,499"}
+    raw = {
+        "IDEESS": "7",
+        "Rótulo": "PRUEBA",
+        "Latitud": "40,4",
+        "Longitud (WGS84)": "-3,7",
+        "Precio Gasoleo A": "1,399",
+        "Precio Gasolina 95 E5": "1,499",
+        "Horario": "L-D: 24H",
+        "Tipo Venta": "P",
+    }
     station = normalize_station(raw)
     assert station and station.prices == {"gasolina_95": 1.499, "diesel": 1.399}
+    assert station.schedule == "L-D: 24H" and station.sale_type == "P"
     assert normalize_station({"Latitud": "rota", "Longitud (WGS84)": "-3"}) is None
 
 
 @pytest.mark.asyncio
 async def test_cache_avoids_second_request():
     calls = 0
+
     async def handler(request):
         nonlocal calls
         calls += 1
-        return httpx.Response(200, json={"Fecha": "ahora", "ListaEESSPrecio": [{"IDEESS": "1", "Latitud": "40", "Longitud (WGS84)": "-3"}]})
+        return httpx.Response(
+            200,
+            json={
+                "Fecha": "ahora",
+                "ListaEESSPrecio": [{"IDEESS": "1", "Latitud": "40", "Longitud (WGS84)": "-3"}],
+            },
+        )
+
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
         service = MitecoService(client, "https://example.test", ttl=60)
         await service.get_stations()

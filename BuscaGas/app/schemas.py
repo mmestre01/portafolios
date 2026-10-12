@@ -33,6 +33,8 @@ class GasStation(Coordinates):
     municipality: str | None = None
     province: str | None = None
     prices: dict[str, float]
+    schedule: str | None = None
+    sale_type: str | None = None
 
 
 class Route(BaseModel):
@@ -75,6 +77,11 @@ class StationResult(Coordinates):
     detour_minutes: float
     extra_distance_km: float
     distance_from_origin_km: float
+    travel_duration_minutes: float | None = None
+    travel_distance_km: float | None = None
+    prices: dict[str, float] = Field(default_factory=dict)
+    schedule: str | None = None
+    sale_type: str | None = None
 
 
 class RouteResult(BaseModel):
@@ -98,3 +105,36 @@ class SearchResult(BaseModel):
     route: RouteResult
     stations: list[StationResult]
     meta: SearchMeta
+
+
+class NearbySearchRequest(BaseModel):
+    location: Location
+    fuel_type: str
+    limit_type: str
+    limit_value: float = Field(gt=0, le=200)
+
+    @model_validator(mode="after")
+    def validate_request(self) -> "NearbySearchRequest":
+        if self.fuel_type not in FUEL_FIELDS:
+            raise ValueError("Tipo de combustible no válido")
+        if self.limit_type not in {"distance", "time"}:
+            raise ValueError("El límite debe indicarse por distancia o tiempo")
+        if self.limit_type == "time" and self.limit_value > 120:
+            raise ValueError("El tiempo máximo es de 120 minutos")
+        return self
+
+
+class NearbySearchMeta(BaseModel):
+    stations_total: int
+    candidates_evaluated: int
+    results: int
+    fuel_type: str
+    limit_type: str
+    limit_value: float
+    fuel_data_timestamp: str | None
+
+
+class NearbySearchResult(BaseModel):
+    location: Location
+    stations: list[StationResult]
+    meta: NearbySearchMeta
