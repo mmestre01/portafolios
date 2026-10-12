@@ -6,7 +6,7 @@
   <title>BuscaGas · Gasolineras en ruta</title>
   <link rel="preconnect" href="https://unpkg.com">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@10.6.1/ol.css">
-  <link rel="stylesheet" href="static/styles.css?v=12">
+  <link rel="stylesheet" href="static/styles.css?v=13">
 </head>
 <body>
   <header class="hero">
@@ -17,6 +17,7 @@
     <section class="search-card">
       <div class="search-tabs" role="tablist" aria-label="Tipo de búsqueda">
         <button id="route-tab" class="search-tab active" type="button" role="tab" aria-selected="true">En una ruta</button>
+        <button id="road-tab" class="search-tab" type="button" role="tab" aria-selected="false">Ya estoy en carretera</button>
         <button id="nearby-tab" class="search-tab" type="button" role="tab" aria-selected="false">Más baratas cerca de mí</button>
         <button id="place-tab" class="search-tab" type="button" role="tab" aria-selected="false">Cerca de una dirección</button>
       </div>
@@ -28,6 +29,14 @@
         <div class="field"><label for="autonomy">Autonomía disponible</label><div class="input-suffix"><input type="number" id="autonomy" min="1" max="1500" step="1" value="300" required><span>km</span></div></div>
         <div class="field slider-field"><label for="detour">Desvío máximo: <strong id="detour-value">10 minutos</strong></label><input type="range" id="detour" min="0" max="30" step="1" value="10"><div class="range-labels"><span>0 min</span><span>30 min</span></div></div>
         <button class="primary" id="submit" type="submit">Buscar gasolineras <span>→</span></button>
+      </form>
+      <form id="road-form" class="search-fields road-fields hidden">
+        <div class="location-copy"><strong>Partimos desde tu ubicación actual</strong><span>Configúralo con el vehículo detenido o pide ayuda a un acompañante.</span></div>
+        <div class="field autocomplete"><label for="road-destination">¿Adónde vas?</label><input id="road-destination" autocomplete="off" placeholder="Ciudad, calle o destino…" maxlength="200" required><div class="suggestions" id="road-destination-results"></div></div>
+        <div class="field"><label for="road-fuel">Combustible</label><select id="road-fuel"><option value="diesel">Diésel</option><option value="gasolina_95">Gasolina 95</option><option value="gasolina_98">Gasolina 98</option><option value="diesel_premium">Diésel premium</option></select></div>
+        <div class="field"><label for="road-autonomy">Autonomía disponible</label><div class="input-suffix"><input type="number" id="road-autonomy" min="1" max="1500" step="1" value="300" required><span>km</span></div></div>
+        <div class="field"><label for="road-detour">Desvío máximo</label><div class="input-suffix"><input type="number" id="road-detour" min="0" max="30" step="1" value="10" required><span>min</span></div></div>
+        <button class="primary location-button" id="road-submit" type="submit">Buscar desde aquí <span>⌖</span></button>
       </form>
       <form id="nearby-form" class="search-fields nearby-fields hidden">
         <div class="location-copy"><strong>Usaremos tu ubicación actual</strong><span>Solo se solicita al buscar y no se almacena.</span></div>
@@ -74,6 +83,6 @@
   </main>
   <footer>Datos de precios del Ministerio de Industria · Rutas de openrouteservice · © OpenStreetMap</footer>
   <script src="https://cdn.jsdelivr.net/npm/ol@10.6.1/dist/ol.js"></script>
-  <script src="static/app.js?v=12"></script>
+  <script src="static/app.js?v=13"></script>
 </body>
 </html>
